@@ -1,0 +1,69 @@
+{
+  "version": "v0.4",
+  "lines": [
+    {
+      "id": "row_top",
+      "indices": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "id": "row_middle",
+      "indices": [
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "row_bottom",
+      "indices": [
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "id": "col_left",
+      "indices": [
+        0,
+        3,
+        6
+      ]
+    },
+    {
+      "id": "col_middle",
+      "indices": [
+        1,
+        4,
+        7
+      ]
+    },
+    {
+      "id": "col_right",
+      "indices": [
+        2,
+        5,
+        8
+      ]
+    },
+    {
+      "id": "diag_main",
+      "indices": [
+        0,
+        4,
+        8
+      ]
+    },
+    {
+      "id": "diag_anti",
+      "indices": [
+        2,
+        4,
+        6
+      ]
+    }
+  ]
+}

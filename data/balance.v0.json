@@ -1,0 +1,136 @@
+{
+  "version": "v0.4",
+  "status": "prototype_values_not_final",
+  "board": {
+    "rows": 3,
+    "cols": 3,
+    "paylines": 8
+  },
+  "symbols": [
+    {
+      "id": "cherry",
+      "display": "🍒",
+      "weight": 30,
+      "basePoint": 1,
+      "linePayout": 30
+    },
+    {
+      "id": "lemon",
+      "display": "🍋",
+      "weight": 25,
+      "basePoint": 2,
+      "linePayout": 60
+    },
+    {
+      "id": "bell",
+      "display": "🔔",
+      "weight": 20,
+      "basePoint": 3,
+      "linePayout": 120
+    },
+    {
+      "id": "diamond",
+      "display": "💎",
+      "weight": 15,
+      "basePoint": 5,
+      "linePayout": 300
+    },
+    {
+      "id": "seven",
+      "display": "7️⃣",
+      "weight": 10,
+      "basePoint": 10,
+      "linePayout": 1500
+    }
+  ],
+  "round": {
+    "baseHands": 4,
+    "maxRoundMvp": 10,
+    "roundTargets": [
+      {
+        "round": 1,
+        "targetScore": "120"
+      },
+      {
+        "round": 2,
+        "targetScore": "250"
+      },
+      {
+        "round": 3,
+        "targetScore": "550"
+      },
+      {
+        "round": 4,
+        "targetScore": "1200"
+      },
+      {
+        "round": 5,
+        "targetScore": "3000"
+      },
+      {
+        "round": 6,
+        "targetScore": "7500"
+      },
+      {
+        "round": 7,
+        "targetScore": "18000"
+      },
+      {
+        "round": 8,
+        "targetScore": "45000"
+      },
+      {
+        "round": 9,
+        "targetScore": "120000"
+      },
+      {
+        "round": 10,
+        "targetScore": "300000"
+      }
+    ],
+    "carryRoundScore": false,
+    "carryCoins": true,
+    "carryItems": true
+  },
+  "economy": {
+    "startingCoins": 0,
+    "baseClearReward": 2,
+    "unusedHandReward": 1,
+    "interestPerCoins": 5,
+    "interestCap": 2,
+    "failedRoundReward": 0
+  },
+  "shop": {
+    "slots": 3,
+    "unlimitedPurchases": true,
+    "firstPaidRerollPrice": 1,
+    "rerollPriceIncreasePerPaidReroll": 1,
+    "paidRerollCountResetsPerShop": true,
+    "rarityWeight": {
+      "common": 60,
+      "rare": 27,
+      "epic": 10,
+      "legendary": 3
+    },
+    "allowDuplicateIdsInSameOffer": false,
+    "basePermanentItemSlots": 8,
+    "baseLimitedItemSlots": 2,
+    "discountPriceFloor": 1
+  },
+  "itemRules": {
+    "oneBoardModifierPerHand": true,
+    "defaultAutotrigger": true,
+    "stackSameItemPayoutBonusesAdditively": true,
+    "perLineRounding": "floor",
+    "globalMultiplierRounding": "floor",
+    "maxScoreFormat": "decimal_string"
+  },
+  "ranking": {
+    "sortOrder": [
+      "completedRounds_desc",
+      "runTotalScore_desc",
+      "endedAt_asc"
+    ],
+    "oneBestRecordPerAccount": true
+  }
+}
