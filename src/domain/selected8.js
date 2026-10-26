@@ -38,10 +38,12 @@ export function queueWeightBuffs(board, active, rules, handSequence, removedSymb
 /** Pure last-chance transition, after scoring but before committing failure/ranking. */
 export function rescueHand(state, rules) {
   if (!hasSelected8(rules) || state.phase !== 'ROUND_ACTIVE' || state.handsRemaining !== 0 || state.roundScore >= state.targetScore) return { state, emergency: null };
-  const instance = activeItems(state.items, rules, state.roundIndex).find((i) => getItem(rules, i.itemId).effect.kind === 'grant_hand_before_run_failed');
+  const instance = activeItems(state.items, rules, state.roundIndex).find((i) => ['grant_hand_before_run_failed','clear_round_before_run_failed'].includes(getItem(rules, i.itemId).effect.kind));
   if (!instance) return { state, emergency: null };
   const e = getItem(rules, instance.itemId).effect;
+  if (e.kind === 'clear_round_before_run_failed' && state.roundScore * BigInt(e.minimumTargetRatio.den) < state.targetScore * BigInt(e.minimumTargetRatio.num)) return {state,emergency:null};
   const items = state.items.flatMap((i) => i.instanceId !== instance.instanceId ? [{ ...i }] : i.remainingCharges > 1 ? [{ ...i, remainingCharges: i.remainingCharges - 1 }] : []);
+  if (e.kind === 'clear_round_before_run_failed') return {state:{...state,items},emergency:{type:'EMERGENCY_ROUND_CLEARED',instanceId:instance.instanceId,itemId:instance.itemId}};
   return { state: { ...state, items, handsRemaining: e.handsGranted }, emergency: {
     type: 'EMERGENCY_HAND_GRANTED', instanceId: instance.instanceId, itemId: instance.itemId, handsGranted: e.handsGranted,
   } };

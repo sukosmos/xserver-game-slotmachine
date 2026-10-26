@@ -20,7 +20,7 @@ export function createShop(state, rules, rng, { offerSequence = 0, paidRerolls =
   }
   const counts = new Map();
   for (const instance of state.items) counts.set(instance.itemId, (counts.get(instance.itemId) ?? 0) + 1);
-  let pool = rules.catalog.items.filter((item) => isItemEnabled(item, rules) && state.roundIndex >= (item.minShopRound ?? 1) && (counts.get(item.id) ?? 0) < item.maxStacks);
+  let pool = rules.catalog.items.filter((item) => isItemEnabled(item, rules) && state.roundIndex >= (item.minShopRound ?? 1) && (item.maxStacks === null || (counts.get(item.id) ?? 0) < item.maxStacks));
   const randomTrace = [];
   const slots = Array.from({ length: rules.balance.shop.slots }, (_, index) => {
     const slotId = `round-${state.roundIndex}-offer-${offerSequence}-slot-${index}`;

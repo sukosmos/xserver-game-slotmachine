@@ -33,8 +33,8 @@ function publicState(runId, state, rules) {
     ...(state.handSequence !== undefined ? { handSequence: state.handSequence, pendingNextHandWeightBuffs: state.pendingNextHandWeightBuffs } : {}),
     ...(hasMilestone(rules) ? { cardChoice:state.phase === 'CARD_CHOICE' ? { slots:state.cardOffer.map(({ slotId }) => ({ slotId })) } : null,
       milestoneReward:milestoneRewardView(state, rules), roundWildAvailable:state.roundWildAvailable } : {}),
-    items: state.items.map(({ instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins, purchaseCounter }) => ({
-      instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins, purchaseCounter,
+    items: state.items.map(({ instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins, purchaseCounter, lastTriggeredRound }) => ({
+      instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins, purchaseCounter, lastTriggeredRound,
     })),
     consecutiveWinHands: state.consecutiveWinHands, coins: state.coins, shop: getShopView(state, rules),
   });

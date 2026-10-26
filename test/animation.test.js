@@ -46,3 +46,13 @@ test('emergency Hand is announced after final score before enabling another spin
   assert.ok(stages.indexOf('emergency') > stages.indexOf('fill'));
   assert.ok(!stages.includes('clear'));
 });
+
+test('emergency round rescue is announced between score and clear without granting a Hand', async () => {
+ const steps=[];
+ await presentSpin({event:{rawBoard:['cherry'],board:['cherry'],settlement:{reward:4}},presentation:{emergency:{label:'ROUND SAVED',roundCleared:true}},
+ show:(stage,data)=>steps.push({stage,data}),fill:async()=>steps.push({stage:'fill'}),wait:async()=>{}});
+ assert.ok(steps.findIndex(s=>s.stage==='emergency')>steps.findIndex(s=>s.stage==='fill'));
+ assert.ok(steps.findIndex(s=>s.stage==='clear')>steps.findIndex(s=>s.stage==='emergency'));
+ assert.equal(steps.find(s=>s.stage==='emergency').data.roundCleared,true);
+ assert.equal(steps.find(s=>s.stage==='emergency').data.handsGranted,undefined);
+});

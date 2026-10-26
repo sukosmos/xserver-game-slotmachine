@@ -1,5 +1,10 @@
 // Supported policies for the eight selected effects; tunable numbers remain in data/*.json.
 export const selected8Contracts = {
+  "clear_round_before_run_failed": {
+    "category": "hand", "slot": "charged", "maxStacks": 1,
+    "fields": ["minimumTargetRatio", "automatic", "chargeOn"],
+    "constants": {"automatic": true, "chargeOn": "round_cleared"}
+  },
   "queue_next_hand_weight_if_symbol_absent": {
     "category": "weight",
     "slot": "permanent",

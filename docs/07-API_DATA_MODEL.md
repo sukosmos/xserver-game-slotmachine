@@ -1,9 +1,13 @@
 # 07. API 및 데이터 모델 계약 초안
 
-## v0.11 카드 선택 확장
-- R3 성공 시 정산 후 `CARD_CHOICE`, `shop:null`이 된다. `cardChoice.slots`에는 `{slotId}`3개만 포함하고 순서별 카드 효과·난수는 공개하지 않는다.
+## v0.12 아이템·카드 확장
+- 카탈로그의 `maxStacks:null`은 중첩 무제한이다. 가중치 아이템은 `maxStacks:5`이며 슬롯은 같은 ID끼리 공유한다.
+- 소모 아이템의 `lastTriggeredRound`는 마지막으로 실제 발동한 라운드(미사용0)다. 서버는 같은 라운드의 중복 발동을 막고 남은 Hand 기준 확률을 계산한다.
+- 비상 레버의 스핀 `emergency`는 `{type:'EMERGENCY_ROUND_CLEARED',instanceId,itemId}`이며 `presentation.emergency.roundCleared:true`와 `label:'ROUND SAVED'`로 표시한다. 정산은 같은 트랜잭션에서 한 번만 수행한다.
+- R3 성공 시 정산 후 `CARD_CHOICE`, `shop:null`이 된다. `cardChoice.slots`에는 `{slotId}`4개만 포함하고 순서별 카드 효과·난수는 공개하지 않는다. v0.11 저장 런은 기존3장을 유지한다.
 - `POST /api/game/v1/runs/:id/cards/choice`: `{expectedRevision,slotId}`와 Idempotency-Key를 받는다. 내부 명령은 `CHOOSE_CARD`다. 카드 ID·삭제 심벌·수치는 클라이언트 입력으로 받지 않는다.
 - 선택 응답은 `CARD_SELECTED` 이벤트, 공개 `milestoneReward`, 갱신된 강화 표와 `SHOP` 상태다. 선택과 상점 생성은 한 트랜잭션이며 재전송/동시 선택을 보호한다.
+- 돈벼락의 공개 보상에는 `coinsGranted:30`, 영구 조커에는 `includesLastHand:true`가 추가된다. 돈벼락 지급도 카드 선택과 같은 트랜잭션에서 처리한다. 전체 강화는 `milestoneSpinFactor`로 추가 배수를 기록한다.
 - `roundWildAvailable`은 해당 라운드 첫 Hand의 영구 조커 대기 여부다. 스핀 이벤트 `milestoneWild`와 `wildMarks`는 실제 적용을 표시한다. 과거 규칙 응답에는 신규 필드를 추가하지 않는다.
 - 기존 정산 후 즉시 SHOP 규칙은 카드 단계가 없는 라운드에 적용된다. 세부 계약은 [카드 보상](18-MILESTONE_CARDS.md)을 따른다.
 
@@ -32,6 +36,7 @@ interface ItemInstance {
   activeFromRound: number;     // 이 라운드부터 효과/수명 소모; 구매 시 다음 라운드
   remainingCharges?: number;
   remainingSpins?: number;
+  lastTriggeredRound?: number;
 }
 interface RunView {
   runId: string;
@@ -79,12 +84,12 @@ Phase 5 강화 표 추가: HTTP 생성은 `{state,upgrades}`, 액션은 `{state,
 | GET | `/api/game/v1/runs/:id/catalog` | 소유자 확인 후 해당 런에 고정된 규칙의 공개 카탈로그 |
 | GET | `/api/game/v1/me` | 내 불투명 playerId |
 | GET | `/api/game/v1/runs?limit=20` | 내 최신 런 목록; limit 1~100 |
-| POST | `/api/game/v1/runs` | 새 런 생성, Round 1 / Hand 5 / 2 Coin |
+| POST | `/api/game/v1/runs` | 새 런 생성, Round 1 / Hand 5 / 3 Coin |
 | GET | `/api/game/v1/runs/:id` | `{state,upgrades,lastEvent,lastSpin,createdAt,updatedAt,endedAt}` 복구; 없는/타인 런은 404 |
 | POST | `/api/game/v1/runs/:id/spins` | Hand 1 소비, 서버 추첨/아이템/점수 계산 |
 | POST | `/api/game/v1/runs/:id/claim` | 과거 v0.6 런 복구용. v0.7은 성공 스핀에서 자동 정산하므로 호출 불필요 |
 | POST | `/api/game/v1/runs/:id/shop/purchases` | `slotId`로 상품 구매, 돈/슬롯 동시 갱신 |
-| POST | `/api/game/v1/runs/:id/shop/rerolls` | 상품 3칸 재추첨 및 코인 비용 차감 |
+| POST | `/api/game/v1/runs/:id/shop/rerolls` | 상품 4칸 재추첨 및 코인 비용 차감 |
 | POST | `/api/game/v1/runs/:id/shop/discards` | `instanceId`로 1개 폐기, 환불 없음 |
 | POST | `/api/game/v1/runs/:id/shop/continue` | 다음 라운드 진입; 최종 라운드는 정산 시 종료 |
 | GET | `/api/game/v1/leaderboard?limit=20` | `{entries:[{rank,playerId,runId,completedRounds,runTotalScore,endedAt,rulesVersion}]}`; limit 1~100 |

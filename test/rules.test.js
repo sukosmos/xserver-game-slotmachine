@@ -8,7 +8,7 @@ test('load and freeze all three catalogs; compile scores to BigInt', () => {
   assert.equal(rules.catalog.items.length, 37);
   assert.equal(rules.lines.length, 8);
   assert.equal(rules.symbolsById.seven.linePayout, 1500n);
-  assert.equal(getItem(rules, 'miracle_hand').effect.triggerChanceBasisPoints, 1600);
+  assert.equal(getItem(rules, 'miracle_hand').effect.triggerChanceBasisPoints, 2000);
   assert.throws(() => getItem(rules, 'unknown'), { code: 'UNKNOWN_ITEM' });
   assert.throws(() => getItem(rules, 'toString'), { code: 'UNKNOWN_ITEM' });
   assert.throws(() => { rules.catalog.items[0].price = 99; }, TypeError);
@@ -75,8 +75,11 @@ const invalidCases = [
   ['zero price', (r) => { r.catalog.items[0].price = 0; }],
   ['zero stacks', (r) => { r.catalog.items[0].maxStacks = 0; }],
   ['zero fraction denominator', (r) => { r.catalog.items[5].effect.extraFactor.den = 0; }],
-  ['missing charges', (r) => { delete r.catalog.items[10].initialCharges; }],
-  ['missing duration', (r) => { delete r.catalog.items[11].durationSpins; }],
+  ['missing charges', (r) => { delete r.catalog.items.find(i=>i.slot==='charged').initialCharges; }],
+  ['missing duration', (r) => { const i=r.catalog.items[11];i.slot='timed';delete i.initialCharges; }],
+  ['unknown consumable policy', (r) => { r.catalog.items[11].effect.triggerPolicy='always'; }],
+  ['unlimited charged item', (r) => { r.catalog.items[11].maxStacks=null; }],
+  ['invalid rescue threshold', (r) => { r.catalog.items.find(i=>i.id==='emergency_lever').effect.minimumTargetRatio={num:1,den:1}; }],
   ['charges on permanent item', (r) => { r.catalog.items[0].initialCharges = 2; }],
   ['chance above 100%', (r) => { r.catalog.items[10].effect.triggerChanceBasisPoints = 10001; }],
   ['non-uniform miracle', (r) => { r.catalog.items[10].effect.candidateSelection = 'highest_payout'; }],

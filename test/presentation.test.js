@@ -25,9 +25,10 @@ test('inactive conditions do not claim activation; real board triggers and expir
   const event = { type: 'SPIN_RESOLVED', ...spinWithItems(rules, randomForBoard(noLineBoard), initial) };
   assert.deepEqual(spinPresentation(event, rules).effects, []);
   const wild = createRun(rules, { initialItemIds: ['joker_mask'] });
-  const first = spinWithItems(rules, randomForBoard(cherryBoard), wild);
+  const first = spinWithItems(rules, randomForBoard(cherryBoard,rules,[0]), wild);
   const second = { type: 'SPIN_RESOLVED', ...spinWithItems(rules, randomForBoard(cherryBoard), { ...wild, items: first.itemsAfterSpin }) };
-  const view = spinPresentation(second, rules);
+  assert.deepEqual(second.triggeredItems, []);
+  const view = spinPresentation({ type:'SPIN_RESOLVED', ...first }, rules);
   assert.equal(view.effects[0].label, '중앙 WILD');
   assert.equal(view.expired[0].itemId, 'joker_mask');
   assert.equal(spinPresentation({ type: 'ITEM_PURCHASED' }, rules), null);

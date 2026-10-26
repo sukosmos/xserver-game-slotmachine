@@ -5,7 +5,7 @@ import { calculateClearReward } from './economy.js';
 import { createShop, buyItem, rerollShop, discardShopItem } from './shop.js';
 import { roundHands } from './hands.js';
 import { hasSelected8, rescueHand } from './selected8.js';
-import { hasMilestone, createCardOffer, chooseMilestone, rewardDefinition } from './milestone.js';
+import { hasMilestone, createCardOffer, chooseMilestone, isWildReward } from './milestone.js';
 
 /** @typedef {{ type: 'SPIN' | 'CLAIM' | 'CONTINUE' | 'REROLL' } | { type: 'BUY', slotId: string } | { type: 'DISCARD', instanceId: string }} RunAction */
 
@@ -100,7 +100,7 @@ export function applyAction(previous, action, rules, rng) {
     }
     let settlement = null;
     if (state.handsRemaining === 0 || (rules.balance.round.autoClearOnTarget && state.roundScore >= state.targetScore)) {
-      if (state.roundScore >= state.targetScore) {
+      if (state.roundScore >= state.targetScore || rescued.emergency?.type === 'EMERGENCY_ROUND_CLEARED') {
         const cleared = completeRound(state, rules, rng);
         settlement = cleared.settlement;
         randomTrace.push(...cleared.randomTrace);
@@ -124,7 +124,7 @@ export function applyAction(previous, action, rules, rng) {
     state.targetScore = rules.targets[state.roundIndex - 1];
     state.handsRemaining = roundHands(rules, state.items, state.roundIndex);
     if (rules.balance.round.maxExtraHands !== undefined) state.roundHands = state.handsRemaining;
-    if (hasMilestone(rules)) state.roundWildAvailable = rewardDefinition(state, rules)?.effect.kind === 'first_hand_wild_each_round';
+    if (hasMilestone(rules)) state.roundWildAvailable = isWildReward(state, rules);
     state.phase = 'ROUND_ACTIVE';
     state.shop = null;
     event = { type: 'ROUND_STARTED', roundIndex: state.roundIndex };

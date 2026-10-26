@@ -4,7 +4,7 @@
 `ROUND_ACTIVE → (ROUND_CLEAR → SHOP | RUN_FAILED) → ROUND_ACTIVE → ... → RUN_WON`. `ROUND_CLEAR`는 정산 중의 트랜잭션 내부 단계이며, 10라운드 성공 시 상점 대신 `RUN_WON`으로 이동.
 - `ROUND_ACTIVE`: Hand 남으면 Spin 가능.
 - `ROUND_CLEAR`: 목표 이상이 된 스핀에서 보상을 계산하는 일시적인 정산 단계. Hand가 남아 있어도 `SHOP`으로 이동하며 R3는 먼저 `CARD_CHOICE`를 거친다. 최종 라운드는 `RUN_WON`으로 종료한다.
-- `RUN_FAILED`: Hand 0이면서 라운드 점수 미달.
+- `RUN_FAILED`: Hand 0이면서 라운드 점수 미달. 활성 비상 레버와 목표70% 이상 조건을 만족하면 레버를 소모해 일반 성공 정산으로 이동한다. 점수를 목표치로 올려주지 않는다.
 - `RUN_WON`: **MVP 기준 라운드 10 성공 후 종료**. (무한 모드는 후속 기능.)
 - `ROUND_CLEAR` 진입 시 **원자적으로 한 번만** 코인 정산.
 - 상점에서 산 아이템은 다음 라운드부터 효과 적용.

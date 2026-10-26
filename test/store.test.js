@@ -6,12 +6,14 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { Worker } from 'node:worker_threads';
+import { createRun, applyAction } from '../src/domain/run.js';
+import { CounterRandom } from '../src/server/random.js';
 import { GameStore } from '../src/server/store.js';
 import { createVault } from '../src/server/vault.js';
 import { compareRecords } from '../src/domain/ranking.js';
 import { parseRules } from '../src/domain/rules.js';
 import { legacyRules as rules, rawLegacyRules as rawRules } from './helpers.js';
-import { rules as currentRules } from './helpers.js';
+import { rules as currentRules, rawV011Rules } from './helpers.js';
 
 function fixture(t, config = rules) {
   const dir = mkdtempSync(join(tmpdir(), 'nine-store-'));
@@ -40,7 +42,7 @@ test('R3 hidden cards and chosen reward survive disk restart and simultaneous co
   assert.throws(()=>other.execute('alice',id,{...command,idempotencyKey:'race'}),{code:'STALE_REVISION'});
   active.close(); active=open();
   assert.deepEqual(active.getRun('alice',id).state,result.state);
-  assert.equal(result.state.coins,pending.state.coins);
+  assert.equal(result.state.coins,pending.state.coins+(result.state.milestoneReward.coinsGranted??0));
   act('CONTINUE'); const started=structuredClone(result.state);
   act('SPIN'); const first=structuredClone(result);
   active.close(); active=open();
@@ -248,7 +250,7 @@ test('leaderboard SQL preserves exact ordering, one best per account and earlier
 });
 
 test('selected8 receipt refunds and emergency Hands commit once across connections and disk restart', (t) => {
-  const raw = structuredClone({ balance: currentRules.balance, lines: currentRules.lineDefinitions, catalog: currentRules.catalog });
+  const raw = rawV011Rules(); // Preserve the v0.11 extra-Hand replay regression.
   raw.balance.economy.startingCoins = 50;
   delete raw.balance.round.milestoneCards; // Isolate the selected-eight persistence fixture.
   raw.balance.round.roundTargets[0].targetScore = '1'; raw.balance.round.roundTargets[1].targetScore = '1';
@@ -289,4 +291,22 @@ test('selected8 receipt refunds and emergency Hands commit once across connectio
   assert.equal(result.state.phase, 'RUN_FAILED');
   assert.deepEqual(result.state.pendingNextHandWeightBuffs, []);
   assert.equal(active.leaderboard().entries.length, 1);
+});
+
+
+test('windfall pays exactly thirty coins once across connections and disk restart', (t) => {
+ const raw=structuredClone({balance:currentRules.balance,lines:currentRules.lineDefinitions,catalog:currentRules.catalog});raw.balance.round.roundTargets.forEach(r=>{r.targetScore='1';});
+ const config=parseRules(raw),{store,open,options}=fixture(t,config);
+ let result=store.createRun('alice','windfall'),id=result.state.runId;
+ for(let r=1;r<=3;r++){result=store.execute('alice',id,cmd('SPIN',result.state.revision));if(r<3)result=store.execute('alice',id,cmd('CONTINUE',result.state.revision));}
+ // Only the isolated test reads its private audit to select a known reward.
+ const db=new DatabaseSync(options.filename);const row=db.prepare('SELECT * FROM runs WHERE id=?').get(id);db.close();
+ const audit=createVault(options.key).open(row.audit,JSON.stringify(['run-v1',row.id,row.owner_id,row.rules_hash,row.created_at]));
+ const rng=new CounterRandom(audit.initialSeed);let internal=createRun(config);
+ for(const {command} of audit.actions){const {expectedRevision,idempotencyKey,...action}=command;internal=applyAction(internal,action,config,rng).state;}
+ const slotId=internal.cardOffer.find(c=>c.cardId==='windfall').slotId,before=result.state.coins;
+ const command=cmd('CHOOSE_CARD',result.state.revision,{slotId});result=store.execute('alice',id,command);
+ assert.equal(result.state.coins,before+30);assert.equal(result.event.reward.coinsGranted,30);
+ const second=open();assert.deepEqual(second.execute('alice',id,command),result);assert.throws(()=>second.execute('alice',id,{...command,idempotencyKey:'second-choice'}),{code:'STALE_REVISION'});
+ store.close();second.close();const restarted=open();assert.deepEqual(restarted.getRun('alice',id).state,result.state);assert.deepEqual(restarted.execute('alice',id,command),result);
 });

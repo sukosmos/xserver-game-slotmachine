@@ -5,7 +5,8 @@ import { decimalRatio, percent } from './display.js';
 export function spinPresentation(event, rules) {
   if (event?.type !== 'SPIN_RESOLVED') return null;
   const effects = [], lines = event.winningLines;
-  if (event.milestoneWild) effects.push({ itemId:null, name:'영구 조커', label:'중앙 WILD · 이번 라운드 1회', stage:'board' });
+  if (event.milestoneWild) effects.push({ itemId:null, name:'영구 조커', label:rules.balance.round.milestoneCards?.cards.some((c)=>c.effect.kind === 'first_and_last_hand_wild_each_round') ? '중앙 WILD · 첫·마지막 스핀' : '중앙 WILD · 이번 라운드 1회', stage:'board' });
+  if (event.milestoneSpinFactor) effects.push({itemId:null,name:'전체 강화',label:`×${decimalRatio(event.milestoneSpinFactor)}`,stage:'score'});
   const add = (itemId, label, stage = 'score') => effects.push({ itemId, name: getItem(rules, itemId).nameKo, label, stage });
   for (const trigger of event.triggeredItems) {
     const e = getItem(rules, trigger.itemId).effect;
@@ -39,6 +40,7 @@ export function spinPresentation(event, rules) {
     if (e.kind === 'symbol_line_add_factor' && lines.some((line) => line.symbol === e.symbol))
       add(itemId, `배당 +${percent({ num: BigInt(e.extraFactor.num) * BigInt(stacks), den: e.extraFactor.den })}${e.basePointAdd ? ` · 1칸 +${BigInt(e.basePointAdd) * BigInt(stacks)}` : ''}`);
     if (e.kind === 'spin_multiplier_if_min_real_lines' && lines.length >= e.minRealWinningLines) add(itemId, `×${decimalRatio(e.factor)}`);
+    if (e.kind === 'spin_multiplier') add(itemId, `×${decimalRatio({num:BigInt(e.factor.num)**BigInt(stacks),den:BigInt(e.factor.den)**BigInt(stacks)})}`);
     if (e.kind === 'consecutive_win_multiplier') {
       const exponent = BigInt(Math.min(Math.max(event.consecutiveWinHands - 1, 0), e.maxExponent)) * BigInt(stacks);
       if (exponent > 0n) add(itemId, `×${decimalRatio({ num: BigInt(e.factorPerExtraHit.num) ** exponent, den: BigInt(e.factorPerExtraHit.den) ** exponent })}`);
@@ -61,6 +63,6 @@ export function spinPresentation(event, rules) {
       label: pattern.kind === 'corners' ? '모서리' : pattern.kind === 'crossing' ? '교차' : '2×2', indices: pattern.indices, symbol: pattern.symbol, score: String(pattern.score) })),
   ];
   return { multiplier: `×${decimalRatio(event.globalMultiplier)}`, effects, awards,
-    ...(event.emergency ? { emergency: { name: getItem(rules, event.emergency.itemId).nameKo, handsGranted: event.emergency.handsGranted } } : {}),
+    ...(event.emergency ? { emergency: { name: getItem(rules, event.emergency.itemId).nameKo, ...(event.emergency.type === 'EMERGENCY_ROUND_CLEARED' ? {label:'ROUND SAVED',roundCleared:true} : {handsGranted:event.emergency.handsGranted}) } } : {}),
     expired: event.expiredItems.map((item) => ({ itemId: item.itemId, name: getItem(rules, item.itemId).nameKo })) };
 }

@@ -55,8 +55,8 @@ test('conditional spin effects stay separate; expired effects disappear', () => 
   const view = upgradeView(state, rules).current;
   assert.equal(symbol(view).linePayout, '30');
   assert.deepEqual(view.effects.map((effect) => effect.itemId), ['resonant_bell', 'win_streak', 'joker_mask']);
-  const expiring = state.items.map((instance) => instance.itemId === 'joker_mask' ? { ...instance, remainingSpins: 1 } : instance);
-  const finished = finishItemSpin(expiring, expiring, new Set(), rules);
+  const expiring = state.items;
+  const finished = finishItemSpin(expiring, expiring, new Set([expiring.find(i=>i.itemId==='joker_mask').instanceId]), rules);
   assert.ok(!upgradeView({ ...state, items: finished.itemsAfterSpin }, rules).current.effects.some((effect) => effect.itemId === 'joker_mask'));
 });
 

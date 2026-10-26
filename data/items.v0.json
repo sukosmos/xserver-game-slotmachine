@@ -1,5 +1,5 @@
 {
-  "version": "v0.11",
+  "version": "v0.12",
   "chanceUnits": "basis_points: 10000 = 100%",
   "items": [
     {
@@ -9,7 +9,7 @@
       "price": 2,
       "category": "weight",
       "slot": "permanent",
-      "maxStacks": 3,
+      "maxStacks": 5,
       "effect": {
         "kind": "weight_add",
         "symbol": "cherry",
@@ -24,7 +24,7 @@
       "price": 2,
       "category": "weight",
       "slot": "permanent",
-      "maxStacks": 3,
+      "maxStacks": 5,
       "effect": {
         "kind": "weight_add",
         "symbol": "lemon",
@@ -39,7 +39,7 @@
       "price": 3,
       "category": "weight",
       "slot": "permanent",
-      "maxStacks": 3,
+      "maxStacks": 5,
       "effect": {
         "kind": "weight_add",
         "symbol": "bell",
@@ -54,7 +54,7 @@
       "price": 4,
       "category": "weight",
       "slot": "permanent",
-      "maxStacks": 3,
+      "maxStacks": 5,
       "effect": {
         "kind": "weight_add",
         "symbol": "diamond",
@@ -69,7 +69,7 @@
       "price": 5,
       "category": "weight",
       "slot": "permanent",
-      "maxStacks": 3,
+      "maxStacks": 5,
       "effect": {
         "kind": "weight_add",
         "symbol": "seven",
@@ -84,7 +84,7 @@
       "price": 3,
       "category": "payout",
       "slot": "permanent",
-      "maxStacks": 3,
+      "maxStacks": null,
       "effect": {
         "kind": "symbol_line_add_factor",
         "symbol": "cherry",
@@ -102,7 +102,7 @@
       "price": 3,
       "category": "payout",
       "slot": "permanent",
-      "maxStacks": 3,
+      "maxStacks": null,
       "effect": {
         "kind": "symbol_line_add_factor",
         "symbol": "lemon",
@@ -120,7 +120,7 @@
       "price": 3,
       "category": "payout",
       "slot": "permanent",
-      "maxStacks": 3,
+      "maxStacks": null,
       "effect": {
         "kind": "symbol_line_add_factor",
         "symbol": "bell",
@@ -138,7 +138,7 @@
       "price": 4,
       "category": "payout",
       "slot": "permanent",
-      "maxStacks": 3,
+      "maxStacks": null,
       "effect": {
         "kind": "symbol_line_add_factor",
         "symbol": "diamond",
@@ -156,7 +156,7 @@
       "price": 5,
       "category": "payout",
       "slot": "permanent",
-      "maxStacks": 3,
+      "maxStacks": null,
       "effect": {
         "kind": "symbol_line_add_factor",
         "symbol": "seven",
@@ -173,15 +173,14 @@
       "rarity": "rare",
       "price": 5,
       "category": "board",
-      "slot": "charged",
+      "slot": "permanent",
       "maxStacks": 1,
       "effect": {
         "kind": "random_candidate_edit",
-        "triggerChanceBasisPoints": 1600,
+        "triggerChanceBasisPoints": 2000,
         "candidateSelection": "uniform_per_line",
         "boardPriority": "random_candidate_edit"
-      },
-      "initialCharges": 2
+      }
     },
     {
       "id": "joker_mask",
@@ -189,13 +188,14 @@
       "rarity": "rare",
       "price": 5,
       "category": "board",
-      "slot": "timed",
+      "slot": "charged",
       "maxStacks": 1,
       "effect": {
         "kind": "wild_center",
-        "changesVisualSymbol": false
+        "changesVisualSymbol": false,
+        "triggerPolicy": "remaining_hands_once_per_round"
       },
-      "durationSpins": 2
+      "initialCharges": 1
     },
     {
       "id": "broken_lever",
@@ -208,8 +208,8 @@
       "effect": {
         "kind": "reroll_last_column",
         "condition": "no_completed_raw_lines",
-        "triggerChanceBasisPoints": 6000,
-        "boardPriority": "reroll_last_column"
+        "boardPriority": "reroll_last_column",
+        "triggerPolicy": "remaining_hands_once_per_round"
       },
       "initialCharges": 3
     },
@@ -219,16 +219,16 @@
       "rarity": "rare",
       "price": 4,
       "category": "score",
-      "slot": "timed",
+      "slot": "charged",
       "maxStacks": 1,
       "effect": {
         "kind": "virtual_cherry_line_bonus",
         "condition": "at_least_one_incomplete_final_line",
-        "triggerChanceBasisPoints": 600,
         "fixedPoints": 30,
-        "countsAsRealWinningLine": false
+        "countsAsRealWinningLine": false,
+        "triggerPolicy": "remaining_hands_once_per_round"
       },
-      "durationSpins": 4
+      "initialCharges": 1
     },
     {
       "id": "future_mirror",
@@ -241,8 +241,8 @@
       "effect": {
         "kind": "convert_random_nonseven_to_seven",
         "condition": "at_least_two_sevens",
-        "triggerChanceBasisPoints": 2000,
-        "boardPriority": "seven_transform"
+        "boardPriority": "seven_transform",
+        "triggerPolicy": "remaining_hands_once_per_round"
       },
       "initialCharges": 2
     },
@@ -252,15 +252,15 @@
       "rarity": "rare",
       "price": 5,
       "category": "board",
-      "slot": "timed",
+      "slot": "charged",
       "maxStacks": 1,
       "effect": {
         "kind": "random_candidate_edit",
-        "triggerChanceBasisPoints": 1200,
         "candidateSelection": "uniform_per_line",
-        "boardPriority": "random_candidate_edit"
+        "boardPriority": "random_candidate_edit",
+        "triggerPolicy": "remaining_hands_once_per_round"
       },
-      "durationSpins": 5
+      "initialCharges": 1
     },
     {
       "id": "calculated_miracle",
@@ -272,9 +272,9 @@
       "maxStacks": 1,
       "effect": {
         "kind": "best_candidate_edit",
-        "triggerChanceBasisPoints": 1000,
         "candidateSelection": "best_delta_after_all_scoring",
-        "boardPriority": "best_candidate_edit"
+        "boardPriority": "best_candidate_edit",
+        "triggerPolicy": "remaining_hands_once_per_round"
       },
       "initialCharges": 1
     },
@@ -288,13 +288,13 @@
       "maxStacks": 1,
       "effect": {
         "kind": "random_candidate_edit",
-        "triggerChanceBasisPoints": 2000,
         "candidateSelection": "uniform_per_line",
         "selectedLineMultiplier": {
           "num": 3,
           "den": 1
         },
-        "boardPriority": "random_candidate_edit"
+        "boardPriority": "random_candidate_edit",
+        "triggerPolicy": "remaining_hands_once_per_round"
       },
       "initialCharges": 2
     },
@@ -475,7 +475,7 @@
       "price": 4,
       "category": "weight",
       "slot": "permanent",
-      "maxStacks": 1,
+      "maxStacks": 5,
       "effect": {
         "kind": "queue_next_hand_weight_if_symbol_absent",
         "observedBoard": "finalPhysicalBoard",
@@ -492,7 +492,7 @@
       "id": "mirror_copier",
       "nameKo": "거울 복사기",
       "rarity": "rare",
-      "price": 6,
+      "price": 5,
       "category": "board",
       "slot": "charged",
       "maxStacks": 1,
@@ -500,7 +500,6 @@
       "effect": {
         "kind": "copy_physical_column",
         "condition": "left_and_right_columns_differ",
-        "triggerChanceBasisPoints": 1000,
         "sourceCellIndices": [
           0,
           3,
@@ -513,27 +512,8 @@
         ],
         "boardPriority": "mirror_copier",
         "consumesPhysicalEditSlot": true,
-        "chargeOn": "at_least_one_physical_cell_changed"
-      }
-    },
-    {
-      "id": "temporary_wild",
-      "nameKo": "임시 와일드",
-      "rarity": "epic",
-      "price": 7,
-      "category": "board",
-      "slot": "charged",
-      "maxStacks": 1,
-      "initialCharges": 2,
-      "effect": {
-        "kind": "place_random_temporary_wild_mark",
-        "triggerChanceBasisPoints": 1200,
-        "candidateCells": "all_unmarked_indices",
-        "candidateSelection": "uniform_by_cell",
-        "appliesAfter": "physical_board_modification",
-        "wildDuration": "current_hand_only",
-        "changesPhysicalBoard": false,
-        "chargeOn": "mark_placed_even_without_new_win"
+        "chargeOn": "at_least_one_physical_cell_changed",
+        "triggerPolicy": "remaining_hands_once_per_round"
       }
     },
     {
@@ -562,7 +542,7 @@
       "id": "crossroads_bonus",
       "nameKo": "교차로 보너스",
       "rarity": "epic",
-      "price": 7,
+      "price": 6,
       "category": "score",
       "slot": "permanent",
       "maxStacks": 1,
@@ -610,15 +590,13 @@
       "maxStacks": 1,
       "initialCharges": 1,
       "effect": {
-        "kind": "grant_hand_before_run_failed",
-        "triggerEvent": "HAND_RESOLVED_BEFORE_FAILURE_CHECK",
-        "requiredHandsRemaining": 0,
-        "requiresRoundScoreBelowTarget": true,
-        "handsGranted": 1,
-        "ignoreRoundStartHandCap": true,
+        "kind": "clear_round_before_run_failed",
+        "minimumTargetRatio": {
+          "num": 7,
+          "den": 10
+        },
         "automatic": true,
-        "chargeOn": "hand_granted",
-        "maxActivationsPerInstance": 1
+        "chargeOn": "round_cleared"
       }
     },
     {
@@ -643,6 +621,23 @@
           "patternBonus"
         ],
         "includesWildResolvedActualLines": true
+      }
+    },
+    {
+      "id": "score_puffer",
+      "nameKo": "뻥튀기",
+      "rarity": "rare",
+      "price": 7,
+      "category": "score",
+      "slot": "permanent",
+      "maxStacks": 3,
+      "minShopRound": 3,
+      "effect": {
+        "kind": "spin_multiplier",
+        "factor": {
+          "num": 3,
+          "den": 2
+        }
       }
     }
   ]

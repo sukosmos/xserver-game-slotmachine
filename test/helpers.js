@@ -68,3 +68,8 @@ export function rawV09Rules() {
 export function rawV010Rules() {
   return JSON.parse(readFileSync(new URL('./fixtures/rules-v010.json', import.meta.url), 'utf8'));
 }
+
+export function rawV011Rules() {
+  return JSON.parse(readFileSync(new URL('./fixtures/rules-v011.json', import.meta.url), 'utf8'));
+}
+export const v011Rules = parseRules(rawV011Rules());

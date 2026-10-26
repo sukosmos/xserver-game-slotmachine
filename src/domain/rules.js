@@ -63,6 +63,8 @@ const effectSpecs = {
   convert_random_nonseven_to_seven: ['board', ['condition', 'triggerChanceBasisPoints', 'boardPriority']],
   best_candidate_edit: ['board', ['triggerChanceBasisPoints', 'candidateSelection', 'boardPriority']],
   spin_multiplier_if_min_real_lines: ['score', ['minRealWinningLines', 'factor']],
+  spin_multiplier: ['score', ['factor']],
+  clear_round_before_run_failed: ['hand', ['minimumTargetRatio', 'automatic', 'chargeOn']],
   conditional_per_line_factor: ['score', ['forSeven', 'forOther']],
   zero_base_plus_per_real_line_factor: ['score', ['perRealLineFactor', 'doesNotMultiplyVirtualBonus']],
   consecutive_win_multiplier: ['score', ['factorPerExtraHit', 'maxExponent', 'resetOnNoLine']],
@@ -83,7 +85,8 @@ function validateItem(item, path) {
   text(item.nameKo, `${path}.nameKo`);
   oneOf(item.rarity, rarities, `${path}.rarity`);
   integer(item.price, `${path}.price`, 1);
-  integer(item.maxStacks, `${path}.maxStacks`, 1);
+  if (item.maxStacks === null) literal(item.slot, 'permanent', `${path}.slot`);
+  else integer(item.maxStacks, `${path}.maxStacks`, 1);
   oneOf(item.slot, ['permanent', 'charged', 'timed'], `${path}.slot`);
   if (item.slot === 'charged') integer(item.initialCharges, `${path}.initialCharges`, 1);
   else check(!Object.hasOwn(item, 'initialCharges'), path, 'initialCharges only allowed on charged items');
@@ -100,11 +103,27 @@ function validateItem(item, path) {
     literal(item.slot, 'permanent', `${path}.slot`);
     literal(item.maxStacks, 1, `${path}.maxStacks`);
   }
-  keys(effect, ['kind', ...required], optional, `${path}.effect`);
+  const scheduled = effect.triggerPolicy !== undefined;
+  const scheduledKinds = ['random_candidate_edit','wild_center','reroll_last_column','virtual_cherry_line_bonus','convert_random_nonseven_to_seven','best_candidate_edit','copy_physical_column'];
+  if (scheduled) {
+    oneOf(effect.kind, scheduledKinds, `${path}.effect.kind`);
+    oneOf(item.slot, ['charged','timed'], `${path}.slot`);
+    literal(effect.triggerPolicy, 'remaining_hands_once_per_round', `${path}.effect.triggerPolicy`);
+  }
+  keys(effect, ['kind', ...required.filter((key) => !(scheduled && key === 'triggerChanceBasisPoints'))], [...optional, ...(scheduled ? ['triggerPolicy'] : [])], `${path}.effect`);
+  if (effect.kind === 'spin_multiplier') literal(item.slot, 'permanent', `${path}.slot`);
+  if (effect.kind === 'clear_round_before_run_failed') {
+    literal(item.slot, 'charged', `${path}.slot`); literal(item.initialCharges, 1, `${path}.initialCharges`);
+    literal(item.maxStacks, 1, `${path}.maxStacks`); literal(effect.automatic, true, `${path}.effect.automatic`);
+    literal(effect.chargeOn, 'round_cleared', `${path}.effect.chargeOn`);
+    fraction(effect.minimumTargetRatio, `${path}.effect.minimumTargetRatio`);
+    check(exactInteger(effect.minimumTargetRatio.num) > 0n && exactInteger(effect.minimumTargetRatio.num) < exactInteger(effect.minimumTargetRatio.den), path, 'threshold must be between zero and one');
+  }
   const selected = selected8Contracts[effect.kind];
   if (selected) {
     literal(item.slot, selected.slot, `${path}.slot`);
-    literal(item.maxStacks, selected.maxStacks, `${path}.maxStacks`);
+    if (effect.kind === 'queue_next_hand_weight_if_symbol_absent') oneOf(item.maxStacks, [1,5], `${path}.maxStacks`);
+    else literal(item.maxStacks, selected.maxStacks, `${path}.maxStacks`);
     if (effect.kind === 'grant_hand_before_run_failed') literal(item.initialCharges, 1, `${path}.initialCharges`);
     for (const [key, value] of Object.entries(selected.constants)) {
       check(JSON.stringify(effect[key]) === JSON.stringify(value), `${path}.effect.${key}`, 'unsupported policy');
@@ -199,7 +218,8 @@ export function parseRules(input) {
     bestCandidateTieBreak: 'line_definition_order', bestCandidateVirtualRolls: 'shared_lazy_per_spin',
     consecutiveWinsCarryAcrossRounds: true,
   };
-  keys(balance.itemRules, [...Object.keys(itemFlags), 'boardModifierPriority'], ['selected8Items'], 'balance.itemRules');
+  keys(balance.itemRules, [...Object.keys(itemFlags), 'boardModifierPriority'], ['selected8Items','consumableActivation'], 'balance.itemRules');
+  if (balance.itemRules.consumableActivation !== undefined) literal(balance.itemRules.consumableActivation, 'once_per_round_remaining_hands', 'balance.itemRules.consumableActivation');
   if (Object.hasOwn(balance.itemRules, 'selected8Items')) check(typeof balance.itemRules.selected8Items === 'boolean', 'balance.itemRules.selected8Items', 'expected boolean');
   for (const [key, value] of Object.entries(itemFlags)) literal(balance.itemRules[key], value, `balance.itemRules.${key}`);
   const priorities = balance.itemRules.boardModifierPriority;
@@ -248,17 +268,19 @@ export function parseRules(input) {
   array(catalog.items, 'catalog.items');
   check(catalog.items.length > 0, 'catalog.items', 'empty catalog');
   for (const [index, item] of catalog.items.entries()) validateItem(item, `catalog.items[${index}]`);
+  for (const item of catalog.items) if (item.effect.triggerPolicy) literal(balance.itemRules.consumableActivation, 'once_per_round_remaining_hands', 'balance.itemRules.consumableActivation');
   if (catalog.items.some((item) => item.effect.kind === 'square_match_bonus')) check(lines.squares?.length === 4, 'lines.squares', 'square item requires geometry');
   if (catalog.items.some((item) => item.effect.kind === 'round_hands_add')) integer(round.maxExtraHands, 'balance.round.maxExtraHands', 1);
   unique(catalog.items.map((item) => item.id), 'catalog.items');
   if (round.milestoneCards !== undefined) {
     const config = round.milestoneCards;
-    keys(config, ['afterRound','cards'], [], 'milestoneCards');
+    keys(config, ['afterRound','cards'], ['offerCount'], 'milestoneCards');
     integer(config.afterRound, 'milestoneCards.afterRound', 1);
     array(config.cards, 'milestoneCards.cards');
-    check(config.cards.length === 3, 'milestoneCards.cards', 'expected three rewards');
+    if (config.offerCount !== undefined) integer(config.offerCount, 'milestoneCards.offerCount', 3, 4);
+    check(config.cards.length === (config.offerCount ?? 3), 'milestoneCards.cards', 'card count must match offer count');
     unique(config.cards.map((c) => c.id), 'milestoneCards.cards');
-    const kinds = ['remove_weighted_symbol','grant_symbol_upgrades','first_hand_wild_each_round'];
+    const kinds = ['remove_weighted_symbol','grant_symbol_upgrades','first_hand_wild_each_round','first_and_last_hand_wild_each_round','grant_coins'];
     unique(config.cards.map((c) => c.effect?.kind), 'milestoneCards.effects');
     for (const card of config.cards) {
       keys(card, ['id','nameKo','effect'], [], 'milestoneCards.card');
@@ -268,12 +290,16 @@ export function parseRules(input) {
         keys(card.effect, ['kind','redistribution'], [], 'milestoneCards.effect');
         literal(card.effect.redistribution, 'proportional', 'milestoneCards.redistribution');
       } else if (card.effect.kind === 'grant_symbol_upgrades') {
-        keys(card.effect, ['kind','itemIds'], [], 'milestoneCards.effect');
+        keys(card.effect, ['kind','itemIds'], ['spinFactor'], 'milestoneCards.effect');
+        if (card.effect.spinFactor !== undefined) fraction(card.effect.spinFactor, 'milestoneCards.spinFactor');
         array(card.effect.itemIds, 'milestoneCards.itemIds'); unique(card.effect.itemIds, 'milestoneCards.itemIds');
         check(card.effect.itemIds.length === 5, 'milestoneCards.itemIds', 'one upgrade per symbol required');
         const upgrades = card.effect.itemIds.map((id) => catalog.items.find((i) => i.id === id)?.effect);
         check(upgrades.every((e) => e?.kind === 'symbol_line_add_factor' && e.basePointAdd !== undefined), 'milestoneCards.itemIds', 'requires score and payout upgrades');
         unique(upgrades.map((e) => e.symbol), 'milestoneCards.symbols');
+      } else if (card.effect.kind === 'grant_coins') {
+        keys(card.effect, ['kind','coins'], [], 'milestoneCards.effect');
+        integer(card.effect.coins, 'milestoneCards.coins', 1);
       } else {
         keys(card.effect, ['kind','cellIndex'], [], 'milestoneCards.effect');
         literal(card.effect.cellIndex, 4, 'milestoneCards.cellIndex');

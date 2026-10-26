@@ -1,5 +1,5 @@
 {
-  "version": "v0.11",
+  "version": "v0.12",
   "status": "prototype_values_not_final",
   "board": {
     "rows": 3,
@@ -115,23 +115,36 @@
               "resonance_hammer",
               "gem_appraiser",
               "lucky_crown"
-            ]
+            ],
+            "spinFactor": {
+              "num": 5,
+              "den": 4
+            }
           }
         },
         {
           "id": "wild",
           "nameKo": "영구 조커",
           "effect": {
-            "kind": "first_hand_wild_each_round",
+            "kind": "first_and_last_hand_wild_each_round",
             "cellIndex": 4
           }
+        },
+        {
+          "id": "windfall",
+          "nameKo": "돈벼락",
+          "effect": {
+            "kind": "grant_coins",
+            "coins": 30
+          }
         }
-      ]
+      ],
+      "offerCount": 4
     }
   },
   "economy": {
     "startingCoins": 3,
-    "baseClearReward": 3,
+    "baseClearReward": 4,
     "unusedHandReward": 1,
     "interestPerCoins": 5,
     "interestCap": 2,
@@ -177,7 +190,8 @@
     "bestCandidateTieBreak": "line_definition_order",
     "bestCandidateVirtualRolls": "shared_lazy_per_spin",
     "consecutiveWinsCarryAcrossRounds": true,
-    "selected8Items": true
+    "selected8Items": true,
+    "consumableActivation": "once_per_round_remaining_hands"
   },
   "ranking": {
     "sortOrder": [

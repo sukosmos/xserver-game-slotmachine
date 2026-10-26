@@ -119,7 +119,7 @@ test('current HTTP rules grant three coins, auto settle, and activate purchased 
   const id = created.state.runId;
   const first = await call(`/runs/${id}/spins`, { body: { expectedRevision: 0 }, key: 'auto-spin' });
   assert.equal(first.status, 200); assert.equal(first.data.state.phase, 'SHOP');
-  assert.equal(first.data.state.coins, 10); assert.equal(first.data.event.settlement.handBonus, 4);
+  assert.equal(first.data.state.coins, 11); assert.equal(first.data.event.settlement.handBonus, 4);
   assert.equal(first.data.presentation.multiplier, '×1');
   assert.equal(first.data.event.patternScore, '0');
   assert.deepEqual(first.data.event.winningPatterns, []);
@@ -135,11 +135,11 @@ test('current HTTP rules grant three coins, auto settle, and activate purchased 
   assert.ok(!first.data.state.shop.slots.some((slot) => slot.itemId === 'cherry_farm'));
   const hand = first.data.state.shop.slots.find((slot) => slot.itemId === 'extra_hand');
   const bought = (await call(`/runs/${id}/shop/purchases`, { body: { expectedRevision: 1, slotId: hand.slotId }, key: 'buy' })).data;
-  assert.equal(bought.state.coins, 5); assert.equal(bought.upgrades.next.hands, 6);
+  assert.equal(bought.state.coins, 6); assert.equal(bought.upgrades.next.hands, 6);
   const rerolled = (await call(`/runs/${id}/shop/rerolls`, { body: { expectedRevision: 2 }, key: 'reroll' })).data;
-  assert.equal(rerolled.state.coins, 4);
+  assert.equal(rerolled.state.coins, 5);
   const next = (await call(`/runs/${id}/shop/continue`, { body: { expectedRevision: 3 }, key: 'next' })).data;
-  assert.equal(next.state.coins, 4); assert.equal(next.state.roundIndex, 2); assert.equal(next.state.handsRemaining, 6);
+  assert.equal(next.state.coins, 5); assert.equal(next.state.roundIndex, 2); assert.equal(next.state.handsRemaining, 6);
   assert.equal(next.state.roundHands, 6); assert.equal(next.upgrades.current.hands, 6);
   assert.deepEqual((await call('/runs', { body: {}, key: 'auto-create' })).data, created);
 });
@@ -163,7 +163,7 @@ test('card choice HTTP hides the order, validates ownership and commits exactly 
   assert.equal((await call(`/runs/${id}/cards/choice`,{body:{...body,slotId:'evolve'},key:'unknown'})).status,409);
   const chosen=await call(`/runs/${id}/cards/choice`,{body,key:'chosen'});
   assert.equal(chosen.status,200); assert.equal(chosen.data.state.phase,'SHOP');
-  assert.equal(chosen.data.state.coins,current.state.coins);
+  assert.equal(chosen.data.state.coins,current.state.coins+(chosen.data.state.milestoneReward.coinsGranted??0));
   assert.deepEqual((await call(`/runs/${id}/cards/choice`,{body,key:'chosen'})).data,chosen.data);
   assert.equal((await call(`/runs/${id}/cards/choice`,{body,key:'race'})).status,409);
 });

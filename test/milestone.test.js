@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { rules, rawRules, seed, scriptedRandom, randomForBoard, noLineBoard } from './helpers.js';
+import { v011Rules as rules, rawV011Rules as rawRules, seed, scriptedRandom, randomForBoard, noLineBoard } from './helpers.js';
 import { parseRules } from '../src/domain/rules.js';
 import { createRun, applyAction } from '../src/domain/run.js';
 import { weightedSymbols, symbolScores, scoreWithItems } from '../src/domain/item-scoring.js';

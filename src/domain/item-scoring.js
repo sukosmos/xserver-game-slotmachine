@@ -35,7 +35,7 @@ export function symbolScores(rules, items) {
 }
 
 /** No RNG or mutation. Preview and final scoring use this same exact path. */
-export function scoreWithItems(board, rules, items, { consecutiveWinHands = 0, virtualScore = 0n, lineBonus = null, wildMarks = [], physicalChanged = false } = {}) {
+export function scoreWithItems(board, rules, items, { consecutiveWinHands = 0, virtualScore = 0n, lineBonus = null, wildMarks = [], physicalChanged = false, spinFactor = null } = {}) {
   validateBoard(board, rules);
   requireCondition(Number.isSafeInteger(consecutiveWinHands) && consecutiveWinHands >= 0 && consecutiveWinHands < Number.MAX_SAFE_INTEGER, 'INVALID_WIN_STREAK');
   virtualScore = exactInteger(virtualScore);
@@ -54,8 +54,9 @@ export function scoreWithItems(board, rules, items, { consecutiveWinHands = 0, v
     }
     return { ...line, basePayout: line.score, factor, score: floorMultiply(line.score, factor) };
   });
-  let globalMultiplier = rational(1);
+  let globalMultiplier = spinFactor ? fraction(spinFactor) : rational(1);
   for (const effect of effects) {
+    if (effect.kind === 'spin_multiplier') globalMultiplier = multiplyRational(globalMultiplier, fraction(effect.factor));
     if (effect.kind === 'spin_multiplier_if_min_real_lines' && rawLines.length >= effect.minRealWinningLines) globalMultiplier = multiplyRational(globalMultiplier, fraction(effect.factor));
     if (effect.kind === 'consecutive_win_multiplier') {
       const exponent = Math.min(Math.max(nextStreak - 1, 0), effect.maxExponent);

@@ -21,15 +21,15 @@ test('100k hidden offers and deletion draws follow uniform permutations and effe
     const order=createCardOffer(rules,rng).cardOffer.map((c)=>c.cardId).join(',');permutations.set(order,(permutations.get(order)??0)+1);
     deleted[chooseMilestone(state,'s',rules,rng).state.milestoneReward.removedSymbol]++;
   }
-  assert.equal(permutations.size,6);
-  for(const count of permutations.values()) assert.ok(Math.abs(count/trials-1/6)<6*Math.sqrt((1/6)*(5/6)/trials));
+  assert.equal(permutations.size,24);
+  for(const count of permutations.values()) assert.ok(Math.abs(count/trials-1/24)<6*Math.sqrt((1/24)*(23/24)/trials));
   for(const s of weightedSymbols(rules,state.items)) {
     const p=s.weight/110;assert.ok(Math.abs(deleted[s.id]/trials-p)<6*Math.sqrt(p*(1-p)/trials));
   }
   t.diagnostic(JSON.stringify({trials,permutations:Object.fromEntries(permutations),deleted}));
 });
 
-test('100k eligible miracle Hands trigger about 16%, each candidate receives one third of hits', (t) => {
+test('100k eligible miracle Hands trigger about 20%, each candidate receives one third of hits', (t) => {
   const rng = new CounterRandom(seed);
   // Fix the documented board; only the effect rolls use the real seeded RNG.
   const boardRolls = [0, 0, 75, 55, 30, 90, 75, 55, 30];
@@ -43,7 +43,7 @@ test('100k eligible miracle Hands trigger about 16%, each candidate receives one
     if (result.triggeredItems.length) counts[result.triggeredItems[0].lineId] += 1;
   }
   const hits = Object.values(counts).reduce((a, b) => a + b, 0);
-  assert.ok(Math.abs(hits / trials - 0.16) < 6 * Math.sqrt(0.16 * 0.84 / trials));
+  assert.ok(Math.abs(hits / trials - 0.20) < 6 * Math.sqrt(0.20 * 0.80 / trials));
   for (const count of Object.values(counts)) assert.ok(Math.abs(count / hits - 1 / 3) < 6 * Math.sqrt((1 / 3) * (2 / 3) / hits));
   t.diagnostic(JSON.stringify({ trials, hits, triggerRate: hits / trials, counts }));
 });
@@ -69,17 +69,17 @@ test('100k boards per build: three seven blessings increase seven frequency and 
   t.diagnostic(JSON.stringify({ trialsPerBuild: trials, ...counts, expectedBoostedProbability: expected }));
 });
 
-for (const [id, expected] of [['mirror_copier', 0.10], ['temporary_wild', 0.12]]) test(`100k eligible ${id} Hands match configured chance`, (t) => {
-  const rng = new CounterRandom(seed), items = build([id]), counts = Array(9).fill(0);
-  const boardRolls = [0, 0, 75, 55, 30, 90, 75, 55, 30], trials = 100000;
-  let hits = 0;
-  for (let trial = 0; trial < trials; trial++) {
-    let cell = 0;
-    const result = spinWithItems(rules, { nextInt: (bound) => cell < 9 ? boardRolls[cell++] : rng.nextInt(bound) }, { items });
-    const trigger = result.triggeredItems.find((i) => i.itemId === id);
-    if (trigger) { hits++; if (trigger.index !== undefined) counts[trigger.index]++; }
+
+test('100k rounds trigger an eligible consumable exactly once with uniform first-trigger Hands', (t) => {
+ const rng=new CounterRandom(seed),counts=Array(5).fill(0),trials=100000,boardRolls=[0,0,75,55,30,90,75,55,30];
+ for(let trial=0;trial<trials;trial++) {
+  let state=createRun(rules,{initialItemIds:['mirror_copier']}),hits=0;
+  for(let h=5;h>=1;h--) {
+   let cell=0;const result=spinWithItems(rules,{nextInt:bound=>cell<9?boardRolls[cell++]:rng.nextInt(bound)},{...state,handsRemaining:h});
+   if(result.triggeredItems.length){hits++;counts[5-h]++;}state={...state,items:result.itemsAfterSpin};
   }
-  assert.ok(Math.abs(hits / trials - expected) < 6 * Math.sqrt(expected * (1 - expected) / trials));
-  if (id === 'temporary_wild') for (const count of counts) assert.ok(Math.abs(count / hits - 1 / 9) < 6 * Math.sqrt((1 / 9) * (8 / 9) / hits));
-  t.diagnostic(JSON.stringify({ id, trials, hits, triggerRate: hits / trials, ...(id === 'temporary_wild' ? { counts } : {}) }));
+  assert.equal(hits,1);assert.equal(state.items[0].remainingCharges,1);
+ }
+ for(const count of counts)assert.ok(Math.abs(count/trials-.2)<6*Math.sqrt(.2*.8/trials));
+ t.diagnostic(JSON.stringify({trials,counts}));
 });

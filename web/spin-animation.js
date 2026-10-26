@@ -29,7 +29,7 @@ export async function presentSpin({ event, presentation, fast = false, reduced =
   show('score', { board: event.board });
   await fill(reduced ? 0 : fast ? 280 : 650);
   if (presentation?.emergency) {
-    show('emergency', { board: event.board, handsGranted: presentation.emergency.handsGranted });
+    show('emergency', { board: event.board, ...presentation.emergency });
     await pause(950, 650);
   }
   if (event.settlement) {
