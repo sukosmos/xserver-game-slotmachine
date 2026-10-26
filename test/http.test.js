@@ -34,37 +34,40 @@ async function setup(t, serverOptions = {}, mutate = () => {}) {
   return { store, token, otherToken, server, call, url };
 }
 
-test('current HTTP rules start with two coins and settle the successful spin atomically', async (t) => {
+test('current HTTP rules grant three coins, auto settle, and activate purchased Hands next round', async (t) => {
   const { call } = await setup(t, {}, (raw) => {
     Object.assign(raw, currentRawRules());
     raw.balance.round.roundTargets[0].targetScore = '1';
-    raw.catalog.items = raw.catalog.items.filter((item) => ['cherry_farm', 'golden_harvest', 'joker_mask'].includes(item.id));
+    raw.catalog.items = raw.catalog.items.filter((item) => ['cherry_farm', 'golden_harvest', 'extra_hand'].includes(item.id));
   });
   const created = (await call('/runs', { body: {}, key: 'auto-create' })).data;
-  assert.equal(created.state.coins, 2);
+  assert.equal(created.state.coins, 3);
   const id = created.state.runId;
   const first = await call(`/runs/${id}/spins`, { body: { expectedRevision: 0 }, key: 'auto-spin' });
   assert.equal(first.status, 200); assert.equal(first.data.state.phase, 'SHOP');
-  assert.equal(first.data.state.coins, 8); assert.equal(first.data.event.settlement.handBonus, 4);
+  assert.equal(first.data.state.coins, 9); assert.equal(first.data.event.settlement.handBonus, 4);
+  assert.equal(first.data.presentation.multiplier, '×1');
+  assert.deepEqual((await call(`/runs/${id}`)).data.presentation, first.data.presentation);
   assert.equal(first.data.state.revision, 1); assert.equal(first.data.state.canClaim, false);
   assert.deepEqual((await call(`/runs/${id}/spins`, { body: { expectedRevision: 0 }, key: 'auto-spin' })).data, first.data);
   for (const route of ['spins', 'claim']) {
     assert.equal((await call(`/runs/${id}/${route}`, { body: { expectedRevision: 1 }, key: `invalid-${route}` })).status, 409);
   }
-  const farm = first.data.state.shop.slots.find((slot) => slot.itemId === 'cherry_farm');
-  const bought = (await call(`/runs/${id}/shop/purchases`, { body: { expectedRevision: 1, slotId: farm.slotId }, key: 'buy' })).data;
-  assert.equal(bought.state.coins, 6);
+  assert.ok(!first.data.state.shop.slots.some((slot) => slot.itemId === 'cherry_farm'));
+  const hand = first.data.state.shop.slots.find((slot) => slot.itemId === 'extra_hand');
+  const bought = (await call(`/runs/${id}/shop/purchases`, { body: { expectedRevision: 1, slotId: hand.slotId }, key: 'buy' })).data;
+  assert.equal(bought.state.coins, 4); assert.equal(bought.upgrades.next.hands, 6);
   const rerolled = (await call(`/runs/${id}/shop/rerolls`, { body: { expectedRevision: 2 }, key: 'reroll' })).data;
-  assert.equal(rerolled.state.coins, 5);
+  assert.equal(rerolled.state.coins, 3);
   const next = (await call(`/runs/${id}/shop/continue`, { body: { expectedRevision: 3 }, key: 'next' })).data;
-  assert.equal(next.state.coins, 5); assert.equal(next.state.roundIndex, 2); assert.equal(next.state.handsRemaining, 5);
-  assert.equal(next.upgrades.current.symbols[0].weight, 40);
+  assert.equal(next.state.coins, 3); assert.equal(next.state.roundIndex, 2); assert.equal(next.state.handsRemaining, 6);
+  assert.equal(next.state.roundHands, 6); assert.equal(next.upgrades.current.hands, 6);
   assert.deepEqual((await call('/runs', { body: {}, key: 'auto-create' })).data, created);
 });
 
 test('static allowlist serves the game with CSP and never serves source or private files', async (t) => {
   const { url, call, token } = await setup(t);
-  for (const path of ['/', '/app.js', '/client.js', '/format.js', '/styles.css', '/icons.svg']) {
+  for (const path of ['/', '/app.js', '/client.js', '/format.js', '/spin-animation.js', '/styles.css', '/icons.svg']) {
     const result = await fetch(url + path);
     assert.equal(result.status, 200); assert.match(result.headers.get('content-security-policy'), /script-src 'self'/);
     assert.ok((await result.text()).length > 100);

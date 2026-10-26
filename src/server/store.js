@@ -8,6 +8,7 @@ import { GameSession, restoreSession, rulesFingerprint } from './session.js';
 import { createVault } from './vault.js';
 import { publicCatalog } from './catalog.js';
 import { upgradeView } from './upgrades.js';
+import { spinPresentation } from './presentation.js';
 
 const terminal = (state) => ['RUN_FAILED', 'RUN_WON'].includes(state.phase);
 const hashToken = (token) => createHash('sha256').update(token).digest('hex');
@@ -133,9 +134,10 @@ export class GameStore {
   getRun(userId, runId) {
     const { row, audit, session, rules } = this.#load(userId, runId);
     const state = session.getState(userId);
+    const lastSpin = audit.actions.findLast((action) => action.command.type === 'SPIN')?.response.event ?? null;
     return {
       state, upgrades: upgradeView(state, rules), lastEvent: audit.actions.at(-1)?.response.event ?? null,
-      lastSpin: audit.actions.findLast((action) => action.command.type === 'SPIN')?.response.event ?? null,
+      lastSpin, presentation: spinPresentation(lastSpin, rules),
       createdAt: row.created_at, updatedAt: row.updated_at, endedAt: row.ended_at,
     };
   }
@@ -159,7 +161,7 @@ export class GameStore {
     return this.#transaction(() => {
       const { row, session, audit, rules } = this.#load(userId, runId);
       const response = session.execute(userId, command);
-      const projected = { ...response, upgrades: upgradeView(response.state, rules) };
+      const projected = { ...response, upgrades: upgradeView(response.state, rules), presentation: spinPresentation(response.event, rules) };
       const next = session.exportAudit();
       if (next.finalState.revision === audit.finalState.revision) return projected;
       const time = this.#time(row.updated_at);

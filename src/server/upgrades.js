@@ -1,6 +1,7 @@
 import { activeItems } from '../domain/inventory.js';
 import { weightedSymbols, symbolScores } from '../domain/item-scoring.js';
 import { getItem } from '../domain/rules.js';
+import { roundHands } from '../domain/hands.js';
 
 function percentage(weight, total) {
   const hundredths = (BigInt(weight) * 10000n + BigInt(total) / 2n) / BigInt(total);
@@ -24,7 +25,7 @@ export function upgradeView(state, rules) {
     const effectItems = state.items.filter((instance) => instance.activeFromRound <= roundIndex
       || getItem(rules, instance.itemId).effect.kind === 'shop_item_cost_subtract');
     return {
-      roundIndex, totalWeight,
+      roundIndex, totalWeight, hands: roundIndex === state.roundIndex ? (state.roundHands ?? rules.balance.round.baseHands) : roundHands(rules, state.items, roundIndex),
       symbols: weighted.map((symbol) => {
         const base = rules.symbolsById[symbol.id], score = scores.get(symbol.id);
         return { id: symbol.id, basePoint: String(base.basePoint), point: String(score.point),

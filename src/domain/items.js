@@ -10,8 +10,8 @@ const spinKinds = new Set([
   'virtual_cherry_line_bonus', 'convert_random_nonseven_to_seven', 'best_candidate_edit',
   'spin_multiplier_if_min_real_lines', 'conditional_per_line_factor', 'zero_base_plus_per_real_line_factor', 'consecutive_win_multiplier',
 ]);
-// Deliberately routed to the future settlement/shop stage, never spin triggers.
-const economicKinds = new Set(['clear_base_coins_add', 'interest_cap_add', 'one_free_reroll_per_shop', 'shop_item_cost_subtract', 'chance_coins_on_clear']);
+// Settlement/shop/round-start effects never consume a spin trigger.
+const economicKinds = new Set(['clear_base_coins_add', 'interest_cap_add', 'one_free_reroll_per_shop', 'shop_item_cost_subtract', 'chance_coins_on_clear', 'round_hands_add']);
 
 export function candidateLines(board, rules) {
   validateBoard(board, rules);

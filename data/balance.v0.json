@@ -1,5 +1,5 @@
 {
-  "version": "v0.7",
+  "version": "v0.8",
   "status": "prototype_values_not_final",
   "board": {
     "rows": 3,
@@ -91,15 +91,17 @@
     ],
     "carryRoundScore": false,
     "carryCoins": true,
-    "carryItems": true
+    "carryItems": true,
+    "maxExtraHands": 2
   },
   "economy": {
-    "startingCoins": 2,
+    "startingCoins": 3,
     "baseClearReward": 2,
     "unusedHandReward": 1,
     "interestPerCoins": 5,
     "interestCap": 2,
-    "failedRoundReward": 0
+    "failedRoundReward": 0,
+    "clearRewardPerRound": 1
   },
   "shop": {
     "slots": 3,

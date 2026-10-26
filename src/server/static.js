@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 const assets = new Map([
   ['/', ['index.html', 'text/html']], ['/app.js', ['app.js', 'text/javascript']],
   ['/client.js', ['client.js', 'text/javascript']], ['/format.js', ['format.js', 'text/javascript']],
+  ['/spin-animation.js', ['spin-animation.js', 'text/javascript']],
   ['/styles.css', ['styles.css', 'text/css']], ['/icons.svg', ['icons.svg', 'image/svg+xml']],
 ]);
 export function serveStatic(req, res, pathname) {

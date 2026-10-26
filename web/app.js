@@ -1,10 +1,12 @@
 import { GameClient } from './client.js';
 import { compactScore, exactScore, progress, escapeHtml as esc } from './format.js';
+import { delay, presentSpin, interpolateScore } from './spin-animation.js';
 
 const $ = (selector) => document.querySelector(selector);
 const client = new GameClient();
 let catalog, run = null, lastSpin = null, lastEvent = null, busy = true, tab = 'play', ranks = [], recent = [], shownBoard = null;
 let playerId, audioContext, upgrades = null, upgradeMode = null;
+let motion = null, presentation = null;
 const rarity = { common: '일반', rare: '희귀', epic: '영웅', legendary: '전설' };
 const reasons = { INSUFFICIENT_COINS: '코인 부족', INVENTORY_FULL: '아이템 칸 부족', ITEM_CAP_REACHED: '최대 중첩', SOLD_OUT: '품절', EMPTY_SHOP_SLOT: '상품 없음' };
 const errors = { CONNECTION_LOST: '연결이 끊겼어요. 결과 확인을 눌러 안전하게 이어가세요.', PENDING_ACTION: '이전 선택의 결과를 먼저 확인해주세요.',
@@ -18,7 +20,7 @@ document.documentElement.classList.toggle('reduced', preferences.reduced);
 const icon = (name, className = '') => `<svg class="icon ${className}" aria-hidden="true"><use href="/icons.svg#${esc(name)}"></use></svg>`;
 const number = (value, className = '') => `<button class="score-number ${className}" data-action="score" data-value="${esc(value)}" title="${exactScore(value)}" aria-label="${exactScore(value)}점, 전체 숫자 보기">${compactScore(value)}</button>`;
 const itemOf = (id) => catalog?.items.find((item) => item.id === id);
-const itemIcon = (item) => item.effect.symbol ?? (item.category === 'economy' ? 'coin' : item.category === 'board' ? 'spark' : 'crown');
+const itemIcon = (item) => item.effect.symbol ?? (item.category === 'resource' ? 'hand' : item.category === 'economy' ? 'coin' : item.category === 'board' ? 'spark' : 'crown');
 const ended = () => run && ['RUN_WON', 'RUN_FAILED'].includes(run.phase);
 const blocked = () => busy || Boolean(client.pending());
 const button = (label, action, { disabled = false, className = 'secondary', value = '' } = {}) => `<button class="${className}" data-action="${action}" data-value="${esc(value)}" ${disabled ? 'disabled' : ''}>${label}</button>`;
@@ -34,12 +36,13 @@ function lifetime(item, instance) {
   return `${pending}영구`;
 }
 function render() {
-  document.querySelectorAll('[data-tab]').forEach((el) => { el.classList.toggle('nav-active', el.dataset.tab === tab); el.setAttribute('aria-current', el.dataset.tab === tab ? 'page' : 'false'); });
+  document.querySelectorAll('[data-tab]').forEach((el) => { el.disabled = busy; el.classList.toggle('nav-active', el.dataset.tab === tab); el.setAttribute('aria-current', el.dataset.tab === tab ? 'page' : 'false'); });
+  $('[data-action="settings"]').disabled = busy;
   if (!catalog) return;
   const active = document.activeElement?.dataset;
   $('#main').innerHTML = tab === 'catalog' ? renderCatalog() : tab === 'ranking' ? renderRanks() : renderPlay();
   $('#main').setAttribute('aria-busy', String(busy));
-  const gauge = $('#goal-fill'); if (gauge) gauge.style.width = `${run ? progress(run.roundScore, run.targetScore) : 0}%`;
+  const gauge = $('#goal-fill'); if (gauge) gauge.style.width = `${run ? progress(motion?.score ?? run.roundScore, run.targetScore) : 0}%`;
   if (active?.action) [...document.querySelectorAll('[data-action]')].find((el) => el.dataset.action === active.action && el.dataset.value === active.value && !el.disabled)?.focus({ preventScroll: true });
 }
 function renderPlay() {
@@ -47,15 +50,20 @@ function renderPlay() {
   const status = !run ? '준비' : phase === 'SHOP' ? '정산 완료' : phase === 'RUN_WON' ? '전체 클리어' : phase === 'RUN_FAILED' ? '종료' : '';
   return `<section class="run-toolbar"><div class="run-title"><h1>라운드 ${run?.roundIndex ?? 1}<small> / ${catalog.maxRounds}</small></h1>${status ? `<span class="phase-badge">${status}</span>` : ''}</div><div class="run-meta"><span>누적 ${number(run?.runTotalScore ?? '0')}</span><span class="coin-balance">${icon('coin')} ${run?.coins ?? catalog.startingCoins}</span></div><div class="run-tools">${run || recent.length ? button('지난 런', 'history', { disabled: busy, className: 'text-button' }) : ''}${button('새 런', 'new', { disabled: blocked(), className: 'text-button' })}</div></section>
   ${client.pending() ? `<div class="recovery"><span>처리 결과 확인 필요</span>${button('결과 확인', 'retry', { disabled: busy, className: 'primary' })}</div>` : ''}
-  <div class="play-layout"><div class="game-column">${phase === 'SHOP' && !shownBoard ? renderShopScene() : renderMachine()}${renderBreakdown()}</div><aside class="build-column">${renderUpgrades()}${renderInventory()}</aside></div>`;
+  <div class="play-layout"><div class="game-column">${phase === 'SHOP' && !motion ? renderShopScene() : renderMachine()}${renderBreakdown()}</div><aside class="build-column">${renderUpgrades()}${renderInventory()}</aside></div>`;
 }
 function renderMachine() {
-  return `<section class="machine" id="scene" tabindex="-1" aria-label="슬롯"><div class="score-row"><div><span class="muted">점수</span><div class="score">${number(run?.roundScore ?? '0')}</div></div><div class="target"><span>목표</span>${number(run?.targetScore ?? catalog.targets[0])}</div></div><div class="goal-track" role="progressbar" aria-label="목표 달성" aria-valuenow="${run ? progress(run.roundScore, run.targetScore) : 0}" aria-valuemin="0" aria-valuemax="100"><div id="goal-fill"></div></div><div class="hand-row"><span>Hand</span><div class="hand-dots" aria-label="${run?.handsRemaining ?? catalog.baseHands} Hand 남음">${Array.from({ length: catalog.baseHands }, (_, i) => `<i class="${i < (run?.handsRemaining ?? catalog.baseHands) ? 'available' : ''}"></i>`).join('')}<strong>${run?.handsRemaining ?? catalog.baseHands}<span>/${catalog.baseHands}</span></strong></div></div>
-  ${renderBoard()}<div class="spin-caption">${shownBoard ? '아이템 적용 중' : lastSpin ? `<span>${lastSpin.winningLines.length}라인</span><strong>+${compactScore(lastSpin.spinScore)}<small>점</small></strong>` : '<span>3×3 · 8라인</span>'}</div>
-  <div class="action-row">${!run || ended() ? button(run ? '다시 시작' : '시작', 'start', { disabled: blocked(), className: 'primary spin-button' }) : button(busy ? '처리 중' : '스핀', 'spin', { disabled: blocked() || run.handsRemaining === 0, className: 'primary spin-button' })}</div>${ended() ? `<p class="machine-note">${run.completedRounds}라운드 완료 · 기록 저장됨</p>` : ''}</section>`;
+  const score = motion?.score ?? run?.roundScore ?? '0', hands = motion?.hands ?? run?.handsRemaining ?? catalog.baseHands;
+  const totalHands = run?.roundHands ?? catalog.baseHands, rolling = ['rolling', 'stopping'].includes(motion?.stage);
+  return `<section class="machine motion-${motion?.stage ?? 'idle'}" id="scene" tabindex="-1" aria-label="슬롯"><div class="score-row"><div><span class="muted">점수</span><div class="score" id="round-score">${number(score)}</div></div><div class="target"><span>목표</span>${number(run?.targetScore ?? catalog.targets[0])}</div></div><div class="goal-track" role="progressbar" aria-label="목표 달성" aria-valuenow="${run ? progress(score, run.targetScore) : 0}" aria-valuemin="0" aria-valuemax="100"><div id="goal-fill"></div></div><div class="hand-row"><span>Hand</span><div class="hand-dots" aria-label="${hands} Hand 남음">${Array.from({ length: totalHands }, (_, i) => `<i class="${i < hands ? 'available' : ''}"></i>`).join('')}<strong>${hands}<span>/${totalHands}</span></strong></div></div>
+  <div class="machine-interior">${renderBoard()}<button class="lever" data-action="spin" aria-label="손잡이 당기기" title="손잡이 당기기 · Space" ${blocked() || !run || ended() ? 'disabled' : ''}><span class="lever-socket"></span><span class="lever-arm"><span class="lever-knob"></span></span><span class="lever-label">${rolling ? '회전 중' : 'PULL'}</span></button></div>
+  <div class="spin-caption">${rolling ? '<span>회전 중</span>' : lastSpin ? `<span>${lastSpin.winningLines.length}라인</span><strong>+${compactScore(lastSpin.spinScore)}<small>점</small></strong>` : '<span>3×3 · 8라인</span>'}</div>
+  <div class="effect-cues" aria-live="polite">${(motion?.effects ?? []).map((effect) => `<div class="effect-cue"><span>${esc(effect.name)}</span><strong>${esc(effect.label)}</strong></div>`).join('')}${motion?.stage === 'score' && presentation?.expired.length ? `<small class="expiry-cue">${esc(presentation.expired.map((item) => item.name).join(', '))} · 사용 완료</small>` : ''}</div>
+  ${!run || ended() ? `<div class="action-row">${button(run ? '다시 시작' : '시작', 'start', { disabled: blocked(), className: 'primary spin-button' })}</div>` : ''}${ended() ? `<p class="machine-note">${run.completedRounds}라운드 완료 · 기록 저장됨</p>` : ''}
+  ${motion?.stage === 'clear' ? `<div class="round-clear" role="status"><span class="clear-mark">✓</span><strong>ROUND CLEAR</strong><span>라운드 ${run.roundIndex}</span><b>${icon('coin')} +${motion.reward}</b></div>` : ''}</section>`;
 }
 function renderShopScene() {
-  return `<section class="machine shop-scene" id="scene" tabindex="-1" aria-label="상점">${renderShop()}<div class="action-row">${button('다음 라운드', 'continue', { disabled: blocked(), className: 'primary spin-button' })}</div></section>`;
+  return `<section class="machine shop-scene" id="scene" tabindex="-1" aria-label="상점">${renderShop()}${upgrades?.next?.hands > catalog.baseHands ? `<p class="next-hands">다음 라운드 ${upgrades.next.hands} Hand</p>` : ''}<div class="action-row">${button('다음 라운드', 'continue', { disabled: blocked(), className: 'primary spin-button' })}</div></section>`;
 }
 function statChange(base, value, percent = false) {
   const trimPercent = (text) => text.replace(/\.00%$/, '%').replace(/(\.\d)0%$/, '$1%');
@@ -73,9 +81,9 @@ function renderUpgrades() {
 }
 function renderBreakdown() {
   if (!lastSpin) return '';
-  const triggered = lastSpin.triggeredItems.map((t) => itemOf(t.itemId)?.nameKo).filter(Boolean);
+  const triggered = presentation?.effects.map((effect) => `${effect.name} ${effect.label}`) ?? lastSpin.triggeredItems.map((t) => itemOf(t.itemId)?.nameKo).filter(Boolean);
   const expired = lastSpin.expiredItems.map((t) => itemOf(t.itemId)?.nameKo).filter(Boolean);
-  return `<details class="breakdown"><summary>점수 내역 <span>+${compactScore(lastSpin.spinScore)} ⌄</span></summary><dl><div><dt>심벌 점수</dt><dd>${exactScore(lastSpin.baseScore)}</dd></div><div><dt>라인 배당</dt><dd>${exactScore(lastSpin.lineScore)}</dd></div>${lastSpin.virtualScore !== '0' ? `<div><dt>가상 배당</dt><dd>${exactScore(lastSpin.virtualScore)}</dd></div>` : ''}<div><dt>전체 배수</dt><dd>×${esc(lastSpin.globalMultiplier.num)}/${esc(lastSpin.globalMultiplier.den)}</dd></div><div><dt>최종 점수</dt><dd>${exactScore(lastSpin.spinScore)}</dd></div></dl>${triggered.length ? `<p>발동: ${esc(triggered.join(', '))}</p>` : ''}${expired.length ? `<p>만료: ${esc(expired.join(', '))}</p>` : ''}${button('보드 전후', 'before-after', { className: 'text-button' })}</details>`;
+  return `<details class="breakdown"><summary>점수 내역 <span>+${compactScore(lastSpin.spinScore)} ⌄</span></summary><dl><div><dt>심벌 점수</dt><dd>${exactScore(lastSpin.baseScore)}</dd></div><div><dt>라인 배당</dt><dd>${exactScore(lastSpin.lineScore)}</dd></div>${lastSpin.virtualScore !== '0' ? `<div><dt>가상 배당</dt><dd>${exactScore(lastSpin.virtualScore)}</dd></div>` : ''}<div><dt>전체 배수</dt><dd>${esc(presentation?.multiplier ?? '—')}</dd></div><div><dt>최종 점수</dt><dd>${exactScore(lastSpin.spinScore)}</dd></div></dl>${triggered.length ? `<p>발동: ${esc(triggered.join(', '))}</p>` : ''}${expired.length ? `<p>만료: ${esc(expired.join(', '))}</p>` : ''}${button('보드 전후', 'before-after', { className: 'text-button' })}</details>`;
 }
 function isActive(instance) {
   return instance.activeFromRound <= run.roundIndex || itemOf(instance.itemId).effect.kind === 'shop_item_cost_subtract';
@@ -109,24 +117,26 @@ function details(content) { $('#detail-content').innerHTML = content; if (!$('#d
 function showItem(id, owned = false) {
   const item = itemOf(id); if (!item) return;
   const instances = owned ? run.items.filter((instance) => instance.itemId === id) : [];
-  details(`<div class="detail-icon ${item.rarity}">${icon(itemIcon(item))}</div><h2>${esc(item.nameKo)}</h2><p>${esc(item.description)}</p><p class="muted">${rarity[item.rarity]} · 최대 ${item.maxStacks}개 · ${lifetime(item)}</p>${instances.map((instance) => `<div class="owned-instance"><span>${lifetime(item, instance)}</span>${run.phase === 'SHOP' ? button('폐기', 'discard', { value: instance.instanceId, disabled: blocked(), className: 'danger-button' }) : ''}</div>`).join('')}`);
+  details(`<div class="detail-icon ${item.rarity}">${icon(itemIcon(item))}</div><h2>${esc(item.nameKo)}</h2><p>${esc(item.description)}</p><p class="muted">${rarity[item.rarity]} · 최대 ${item.maxStacks}개 · ${lifetime(item)}${item.minShopRound ? ` · R${item.minShopRound} 상점부터` : ''}</p>${instances.map((instance) => `<div class="owned-instance"><span>${lifetime(item, instance)}</span>${run.phase === 'SHOP' ? button('폐기', 'discard', { value: instance.instanceId, disabled: blocked(), className: 'danger-button' }) : ''}</div>`).join('')}`);
 }
 function showSymbol(id) {
   const row = selectedBuild().symbols.find((symbol) => symbol.id === id);
   details(`<h2>${icon(id)} ${esc(catalog.symbols.find((symbol) => symbol.id === id).name)}</h2><dl><div><dt>1칸 점수</dt><dd>${exactScore(row.basePoint)} → ${exactScore(row.point)}</dd></div><div><dt>3개 배당</dt><dd>${exactScore(row.baseLinePayout)} → ${exactScore(row.linePayout)}</dd></div><div><dt>추첨 확률</dt><dd>${row.baseProbability} → ${row.probability}</dd></div></dl><p>가중치 ${row.weight} / 전체 ${selectedBuild().totalWeight}. 보드 조작 전 추첨 기준.</p>${row.sources.length ? `<ul class="source-list">${row.sources.map((source) => `<li>${esc(itemOf(source.itemId).nameKo)} ×${source.stacks}</li>`).join('')}</ul>` : ''}`);
 }
 function renderBoard() {
-  const board = shownBoard ?? lastSpin?.board;
+  const board = motion?.board ?? shownBoard ?? lastSpin?.board;
+  const rolling = ['rolling', 'stopping'].includes(motion?.stage);
+  const raw = rolling || motion?.stage === 'raw';
   const preview = ['cherry', 'bell', 'lemon', 'diamond', 'seven', 'cherry', 'lemon', 'diamond', 'bell'];
-  const winning = board && !shownBoard ? catalog.lines.filter((line) => lastSpin?.winningLines.some((win) => win.lineId === line.id)) : [];
+  const winning = board && !shownBoard && !raw ? catalog.lines.filter((line) => lastSpin?.winningLines.some((win) => win.lineId === line.id)) : [];
   const cells = new Set(winning.flatMap((line) => line.indices));
-  const wild = Boolean(lastSpin && !shownBoard && lastSpin.activeEffects.some((effect) => effect.kind === 'wild_center'));
-  const changed = lastSpin && !shownBoard ? lastSpin.board.map((id, i) => id !== lastSpin.rawBoard[i] ? i : -1) : [];
-  return `<div class="reel-frame ${busy && run?.phase === 'ROUND_ACTIVE' && !preferences.reduced ? 'thinking' : ''} ${!board ? 'preview' : ''}"><div class="reel-grid" role="img" aria-label="${board ? board.map((id) => catalog.symbols.find((s) => s.id === id)?.name).join(', ') : '첫 스핀을 기다리는 예시 슬롯'}">${(board ?? preview).map((id, i) => `<div class="reel-cell ${cells.has(i) ? 'winning' : ''} ${changed.includes(i) ? 'changed' : ''}">${icon(id)}${wild && i === 4 ? '<span class="wild-label">WILD</span>' : ''}${changed.includes(i) ? '<span class="change-dot" title="아이템으로 바뀐 칸"></span>' : ''}</div>`).join('')}</div><svg class="paylines" viewBox="0 0 300 300" aria-hidden="true">${winning.map((line) => `<polyline points="${line.indices.map((i) => `${(i % 3) * 100 + 50},${Math.floor(i / 3) * 100 + 50}`).join(' ')}"/>`).join('')}</svg>${!board ? '<span class="preview-label">첫 스핀 전</span>' : ''}</div>`;
+  const wild = Boolean(lastSpin && !shownBoard && !raw && lastSpin.activeEffects.some((effect) => effect.kind === 'wild_center'));
+  const changed = lastSpin && !shownBoard && !raw ? lastSpin.board.map((id, i) => id !== lastSpin.rawBoard[i] ? i : -1) : [];
+  return `<div class="reel-frame ${rolling ? motion.stage : ''} ${!board ? 'preview' : ''}"><div class="reel-grid" role="img" aria-label="${board ? board.map((id) => catalog.symbols.find((s) => s.id === id)?.name).join(', ') : '첫 스핀을 기다리는 예시 슬롯'}">${(board ?? preview).map((id, i) => `<div class="reel-cell ${cells.has(i) ? 'winning' : ''} ${changed.includes(i) ? 'changed' : ''}">${icon(id)}${wild && i === 4 ? '<span class="wild-label">WILD</span>' : ''}${changed.includes(i) ? '<span class="change-dot" title="아이템으로 바뀐 칸"></span>' : ''}</div>`).join('')}</div>${rolling && !preferences.reduced ? `<div class="reel-motion" aria-hidden="true">${[0, 1, 2].map((col) => `<div class="reel-column"><div class="reel-strip">${[0, 1, 2, 0, 1, 2].map((row) => `<div class="reel-cell">${icon(preview[row * 3 + col])}</div>`).join('')}</div></div>`).join('')}</div>` : ''}<svg class="paylines" viewBox="0 0 300 300" aria-hidden="true">${winning.map((line) => `<polyline points="${line.indices.map((i) => `${(i % 3) * 100 + 50},${Math.floor(i / 3) * 100 + 50}`).join(' ')}"/>`).join('')}</svg>${!board ? '<span class="preview-label">첫 스핀 전</span>' : ''}</div>`;
 }
 async function loadRun(id) {
   const [snapshot, pinned] = await Promise.all([client.get(`/runs/${id}`), client.get(`/runs/${id}/catalog`)]);
-  catalog = pinned; run = snapshot.state; upgrades = snapshot.upgrades; upgradeMode = null; lastEvent = snapshot.lastEvent;
+  catalog = pinned; run = snapshot.state; upgrades = snapshot.upgrades; upgradeMode = null; lastEvent = snapshot.lastEvent; presentation = snapshot.presentation;
   lastSpin = snapshot.lastEvent?.type === 'ROUND_STARTED' ? null : snapshot.lastSpin;
   sessionStorage.setItem(`nine.run.${playerId}`, id);
   await collectLegacyRun();
@@ -176,37 +186,77 @@ function beep(won) {
   gain.gain.setValueAtTime(0.04, audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.18);
   oscillator.connect(gain).connect(audioContext.destination); oscillator.start(); oscillator.stop(audioContext.currentTime + 0.18);
 }
+function animateScore(from, to, duration) {
+  const started = performance.now();
+  return new Promise((resolve) => {
+    const tick = (now) => {
+      const ratio = duration ? Math.min(1, (now - started) / duration) : 1;
+      const value = interpolateScore(from, to, Math.round((1 - (1 - ratio) ** 3) * 1000));
+      motion.score = value;
+      const score = $('#round-score .score-number'), gauge = $('#goal-fill'), track = $('.goal-track');
+      if (score) { score.textContent = compactScore(value); score.dataset.value = value; score.title = exactScore(value); score.setAttribute('aria-label', `${exactScore(value)}점, 전체 숫자 보기`); }
+      if (gauge) gauge.style.width = `${progress(value, run.targetScore)}%`;
+      track?.setAttribute('aria-valuenow', String(progress(value, run.targetScore)));
+      if (ratio < 1) requestAnimationFrame(tick); else resolve();
+    };
+    requestAnimationFrame(tick);
+  });
+}
 async function action(suffix, extra = {}, isNew = false) {
   if (blocked()) return;
-  const previousPhase = run?.phase;
-  busy = true; notice(); playSound(); render();
+  const previousPhase = run?.phase, previousSpin = lastSpin, previousPresentation = presentation;
+  let committed = null, applied = false;
+  const spinning = suffix === 'spins';
+  busy = true;
+  if (spinning) motion = { stage: 'rolling', score: run.roundScore, hands: run.handsRemaining, board: lastSpin?.board };
+  notice(); playSound(); render();
   try {
-    const result = await client.mutate(isNew ? '/runs' : `/runs/${run.runId}/${suffix}`, isNew ? {} : { expectedRevision: run.revision, ...extra });
-    run = result.state; upgrades = result.upgrades; upgradeMode = null; lastEvent = result.event ?? null;
-    sessionStorage.setItem(`nine.run.${playerId}`, run.runId);
-    if (isNew) { catalog = await client.get(`/runs/${run.runId}/catalog`); lastSpin = null; }
-    if (result.event?.type === 'ROUND_STARTED') lastSpin = null;
+    const [result] = await Promise.all([
+      client.mutate(isNew ? '/runs' : `/runs/${run.runId}/${suffix}`, isNew ? {} : { expectedRevision: run.revision, ...extra }),
+      spinning ? delay(preferences.reduced ? 0 : preferences.fast ? 220 : 500) : Promise.resolve(),
+    ]);
+    committed = result;
     if (result.event?.type === 'SPIN_RESOLVED') {
-      lastSpin = result.event;
-      if (!preferences.reduced && lastSpin.rawBoard.some((id, i) => id !== lastSpin.board[i])) {
-        shownBoard = lastSpin.rawBoard; render();
-        await new Promise((resolve) => setTimeout(resolve, preferences.fast ? 160 : 550)); shownBoard = null;
-      }
+      lastSpin = result.event; presentation = result.presentation;
+      motion.hands = result.state.handsRemaining;
+      await presentSpin({ event: lastSpin, presentation, fast: preferences.fast, reduced: preferences.reduced,
+        show(stage, data) {
+          Object.assign(motion, { stage, effects: [] }, data); render();
+          if (stage === 'effects') { beep(true); notice(data.effects.map((effect) => `${effect.name} ${effect.label}`).join(' · '), false, true); }
+          if (stage === 'clear') notice(`라운드 ${run.roundIndex} 클리어 · +${data.reward}코인`, false, true);
+        },
+        fill: (duration) => animateScore(run.roundScore, result.state.roundScore, duration),
+      });
       beep(lastSpin.winningLines.length > 0);
-      notice(`${lastSpin.winningLines.length}라인 · +${exactScore(lastSpin.spinScore)}점`, false, true);
-    } else if (lastEvent?.settlement) notice(`정산 +${lastEvent.settlement.reward}코인`, false, true);
-    else if (lastEvent?.type === 'ITEM_PURCHASED') notice(`${itemOf(lastEvent.itemId)?.nameKo} 구매 · ${itemOf(lastEvent.itemId)?.effect.kind === 'shop_item_cost_subtract' ? '즉시 적용' : '다음 라운드 반영'}`, false, true);
+      if (!lastSpin.settlement) notice(`${lastSpin.winningLines.length}라인 · +${exactScore(lastSpin.spinScore)}점`, false, true);
+    }
+    run = result.state; upgrades = result.upgrades; upgradeMode = null; lastEvent = result.event ?? null;
+    applied = true;
+    sessionStorage.setItem(`nine.run.${playerId}`, run.runId);
+    motion = null;
+    if (isNew) { catalog = await client.get(`/runs/${run.runId}/catalog`); lastSpin = null; presentation = null; }
+    if (result.event?.type === 'ROUND_STARTED') { lastSpin = null; presentation = null; }
+    if (lastEvent?.type === 'ITEM_PURCHASED') notice(`${itemOf(lastEvent.itemId)?.nameKo} 구매 · ${itemOf(lastEvent.itemId)?.effect.kind === 'shop_item_cost_subtract' ? '즉시 적용' : '다음 라운드 반영'}`, false, true);
     await collectLegacyRun();
+    if (spinning && !result.event.settlement && lastEvent?.type === 'ROUND_CLAIMED') {
+      motion = { stage: 'clear', score: run.roundScore, hands: run.handsRemaining, reward: lastEvent.settlement.reward, board: lastSpin.board };
+      render(); await delay(preferences.fast ? 650 : 1050); motion = null;
+    }
     if (ended()) ranks = (await client.get('/leaderboard')).entries;
   } catch (error) {
+    if (committed && !applied) {
+      run = committed.state; upgrades = committed.upgrades; lastEvent = committed.event ?? null;
+      if (spinning) { lastSpin = committed.event; presentation = committed.presentation; }
+    } else if (!committed && motion) { lastSpin = previousSpin; presentation = previousPresentation; }
     notice(errors[error.code] ?? reasons[error.code] ?? '선택을 처리하지 못했어요. 상태를 확인하고 다시 시도해주세요.', true);
     if (error.status === 401 && !$('#login').open) $('#login').showModal();
     if (error.status === 409 && !client.pending() && run) { try { await loadRun(run.runId); } catch {} }
   } finally {
-    busy = false; shownBoard = null; render();
-    if (run?.phase !== previousPhase) $('#scene')?.focus();
+    busy = false; shownBoard = null; motion = null; render();
+    if (run?.phase !== previousPhase) $('#scene')?.focus({ preventScroll: true });
   }
 }
+
 async function retry() {
   if (busy) return;
   busy = true; render();
@@ -219,13 +269,14 @@ async function retry() {
   finally { busy = false; render(); }
 }
 async function changeTab(next) {
+  if (busy) return;
   tab = next; render();
   if (tab === 'ranking') {
     try { ranks = (await client.get('/leaderboard')).entries; render(); } catch (error) { notice(errors[error.code] ?? '랭킹을 불러오지 못했어요.', true); }
   }
 }
 document.addEventListener('click', async (event) => {
-  const target = event.target.closest('button'); if (!target || target.disabled) return;
+  const target = event.target.closest('button'); if (!target || target.disabled || busy) return;
   if (target.dataset.tab) { await changeTab(target.dataset.tab); return; }
   const { action: name, value } = target.dataset;
   if (name === 'score') details(`<h2>전체 점수</h2><p class="exact-score">${exactScore(value)}점</p>`);

@@ -7,18 +7,18 @@ import { GameStore } from '../src/server/store.js';
 import { rules, rawRules, cherryBoard, noLineBoard, randomForBoard, seed } from './helpers.js';
 
 const spin = (state, board = cherryBoard, config = rules) => applyAction(state, { type: 'SPIN' }, config, randomForBoard(board, config, Array(8).fill(0)));
-test('v0.7: two starting coins, target clears on first spin and unused Hands pay immediately', () => {
+test('v0.8: three starting coins, target clears on first spin and unused Hands pay immediately', () => {
   const initial = createRun(rules);
-  assert.equal(initial.coins, 2);
+  assert.equal(initial.coins, 3);
   assert.equal(initial.handsRemaining, 5);
   const result = spin(initial);
   assert.equal(result.state.phase, 'SHOP'); assert.equal(result.state.revision, 1);
   assert.equal(result.state.handsRemaining, 4); assert.equal(result.event.settlement.reward, 6);
-  assert.equal(result.state.coins, 8); assert.equal(result.state.completedRounds, 1);
-  assert.equal(initial.coins, 2); assert.equal(initial.revision, 0);
+  assert.equal(result.state.coins, 9); assert.equal(result.state.completedRounds, 1);
+  assert.equal(initial.coins, 3); assert.equal(initial.revision, 0);
   for (const type of ['SPIN', 'CLAIM']) assert.throws(() => applyAction(result.state, { type }, rules), { code: 'INVALID_RUN_PHASE' });
   const next = applyAction(result.state, { type: 'CONTINUE' }, rules).state;
-  assert.equal(next.coins, 8); assert.equal(next.roundIndex, 2);
+  assert.equal(next.coins, 9); assert.equal(next.roundIndex, 2);
   assert.equal(next.handsRemaining, 5); assert.equal(next.targetScore, 240n);
 });
 test('auto clear exact boundary, one below target, last Hand and terminal round', () => {
@@ -50,7 +50,7 @@ test('automatic reward, RNG and shop replay exactly; retry never grants another 
   const config = parseRules(raw), session = new GameSession(config, { userId: 'alice', seed });
   const command = { type: 'SPIN', expectedRevision: 0, idempotencyKey: 'spin' };
   const first = session.execute('alice', command), audit = session.exportAudit();
-  assert.equal(first.state.coins, 8); assert.equal(first.state.canClaim, false);
+  assert.equal(first.state.coins, 9); assert.equal(first.state.canClaim, false);
   assert.deepEqual(session.execute('alice', command), first);
   assert.deepEqual(session.exportAudit(), audit);
   assert.deepEqual(replayAudit(config, audit), first.state);
@@ -67,8 +67,8 @@ test('creation retries and reads do not replenish starting coins', (t) => {
   const store = new GameStore({ filename: ':memory:', key: Buffer.alloc(32, 7), rules });
   t.after(() => store.close());
   const created = store.createRun('alice', 'new');
-  assert.equal(created.state.coins, 2);
+  assert.equal(created.state.coins, 3);
   assert.deepEqual(store.createRun('alice', 'new'), created);
-  assert.equal(store.getRun('alice', created.state.runId).state.coins, 2);
+  assert.equal(store.getRun('alice', created.state.runId).state.coins, 3);
   assert.equal(store.listRuns('alice').runs.length, 1);
 });

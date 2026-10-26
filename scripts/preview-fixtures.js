@@ -6,10 +6,16 @@ import { GameStore } from '../src/server/store.js';
 import { createGameServer } from '../src/server/http.js';
 
 const rules = loadRules(), servers = [], stores = [];
-for (const [scenario, port, target] of [['win', 3001, '1'], ['fail', 3002, '100000000000000000000']]) {
+for (const [scenario, port, target] of [['win', 3001, '1'], ['fail', 3002, '100000000000000000000'], ['effects', 3003, '100000000']]) {
   const raw = structuredClone({ balance: rules.balance, lines: rules.lineDefinitions, catalog: rules.catalog });
   raw.balance.round.roundTargets.forEach((row) => { row.targetScore = target; });
   raw.catalog.items = raw.catalog.items.filter((item) => ['cherry_farm', 'golden_harvest', 'joker_mask'].includes(item.id));
+  if (scenario === 'effects') {
+    raw.balance.round.roundTargets[0].targetScore = '1';
+    raw.balance.symbols[0].weight = 100000;
+    raw.balance.economy.startingCoins = 20;
+    raw.catalog.items = rules.catalog.items.filter((item) => ['win_streak', 'joker_mask', 'extra_hand'].includes(item.id));
+  }
   const store = new GameStore({ filename: ':memory:', key: randomBytes(32), rules: parseRules(raw) });
   const server = createGameServer({ store, localPlayer: `fixture-${scenario}` });
   stores.push(store); servers.push(server);

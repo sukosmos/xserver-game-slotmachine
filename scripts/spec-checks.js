@@ -64,6 +64,7 @@ export function checkDocumentation(rules, documents) {
     const path = `${item.id} documentation`;
     if (effect.kind === 'weight_add') {
       assert.ok(itemText.includes(`\`${item.nameKo}\`: +${effect.amount}(${item.price}코인, 최대 ${item.maxStacks})`), `${path}: weight/price/stack drift`);
+      if (item.minShopRound) assert.ok(itemText.includes(`${item.minShopRound}라운드 종료 상점부터`), `${path}: shop unlock drift`);
     } else if (effect.kind === 'symbol_line_add_factor') {
       const percent = Number(effect.extraFactor.num) / Number(effect.extraFactor.den) * 100;
       assert.ok(itemText.includes(`\`${item.nameKo}\`: 추가 +${percent}%(${item.price}코인,`), `${path}: factor/price drift`);
@@ -72,6 +73,10 @@ export function checkDocumentation(rules, documents) {
       assert.ok(row, `${path}: missing row`);
       const priceText = row.at(-1);
       assert.equal(item.id === 'volatile_joker' ? Number(priceText.split('/')[1]) : Number(priceText.split('/')[0]), item.price, `${path}: price drift`);
+      if (effect.kind === 'round_hands_add') {
+        assert.ok(row[1].includes(`Hand +${effect.amount}, 최대 ${item.maxStacks}개 중첩`), `${path}: Hand effect drift`);
+        assert.ok(itemText.includes(`round.maxExtraHands=${round.maxExtraHands}`), `${path}: Hand cap drift`);
+      }
       if (effect.triggerChanceBasisPoints !== undefined) {
         assert.match(row.join(' '), new RegExp(`(?:^|[^0-9])${effect.triggerChanceBasisPoints / 100}%`), `${path}: chance drift`);
       }
@@ -98,7 +103,8 @@ export function checkDocumentation(rules, documents) {
     };
     assert.equal(row[1], expectedEffects[effect.kind], `${item.id}: economic effect drift`);
   }
-  const formula = `coinReward = ${economy.baseClearReward} + handsRemaining + min(${economy.interestCap}, floor(coinsBeforeSettlement / ${economy.interestPerCoins}))`;
+  const growth = economy.clearRewardPerRound === undefined ? '' : ` + (roundIndex - 1) * ${economy.clearRewardPerRound}`;
+  const formula = `coinReward = ${economy.baseClearReward}${growth} + handsRemaining + min(${economy.interestCap}, floor(coinsBeforeSettlement / ${economy.interestPerCoins}))`;
   assert.ok(economyText.includes(formula), 'coin reward formula drift');
   assert.ok(economyText.includes(`일반 ${shop.rarityWeight.common}%, 희귀 ${shop.rarityWeight.rare}%, 영웅 ${shop.rarityWeight.epic}%, 전설 ${shop.rarityWeight.legendary}%`), 'rarity weights drift');
   assert.ok(doc('data/README.md').includes(`**${rules.catalog.items.length}종**`), 'catalog count drift');

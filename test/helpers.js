@@ -7,6 +7,10 @@ export function rawLegacyRules() {
   const raw = rawRules();
   for (const part of Object.values(raw)) part.version = 'v0.6';
   delete raw.balance.round.autoClearOnTarget;
+  delete raw.balance.round.maxExtraHands;
+  delete raw.balance.economy.clearRewardPerRound;
+  raw.catalog.items = raw.catalog.items.filter((item) => item.id !== 'extra_hand');
+  for (const item of raw.catalog.items) delete item.minShopRound;
   raw.balance.round.baseHands = 4;
   raw.balance.round.roundTargets = [120,250,550,1200,3000,7500,18000,45000,120000,300000]
     .map((target, index) => ({ round: index + 1, targetScore: String(target) }));

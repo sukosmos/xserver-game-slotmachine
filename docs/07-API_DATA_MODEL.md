@@ -124,3 +124,9 @@ Phase 5 강화 표 추가: HTTP 생성은 `{state,upgrades}`, 액션은 `{state,
 - 새로고침/재접속해도 같은 런 상태 복구. 스핀 중 클라이언트가 끊겨도 Hand와 점수가 중복 계산되지 않도록 `GET run`으로 복구.
 - 밸런스 버전 변경 시 **이미 시작된 런은 시작 당시 rulesVersion을 유지**하는 정책 권장.
 - 구현은 규칙 원본을 지문별로 저장하고 시작 당시 규칙으로 감사 로그를 재검산한다. 전체 로그 안에 초기 시드·RNG 커서·인벤토리·코인·진열·중복 응답이 들어 있어 DB 재연결/서버 재시작 후에도 복구된다. 런 종료의 endedAt은 서버 밀리초 시각이고 랭킹과 함께 원자적으로 저장한다.
+
+### v0.8 Hand 및 연출 투영
+- 새 규칙의 공개 상태에는 라운드 시작에 고정한 `roundHands`가 포함된다. `handsRemaining`은 이 수 이하이며 다음 라운드 시작에 다시 계산한다. 과거 규칙의 감사 상태에는 새 필드를 삽입하지 않는다.
+- 강화 표의 각 snapshot은 현재/다음 라운드 총 `hands`도 제공한다.
+- SPIN 응답과 GET 런의 `presentation`은 `multiplier`, `effects:[{itemId,name,label,stage}]`, `expired:[{itemId,name}]`를 제공한다. stage는 draw/board/score/clear이며 실제 이벤트와 고정 규칙에서 서버가 계산한다. 스핀 외 액션은 null이다.
+- `presentation`은 `upgrades`처럼 감사 로그 밖의 표시용 투영이다. 중복 요청은 원래 이벤트 기준으로 재계산하며 클라이언트가 발동 여부/보상/배율을 제출하지 않는다.

@@ -8,5 +8,6 @@
   <symbol id="spark" viewBox="0 0 100 100"><path d="M50 8L60 40L92 50L60 60L50 92L40 60L8 50L40 40Z" fill="currentColor"/></symbol>
   <symbol id="crown" viewBox="0 0 100 100"><path d="M16 26L34 43L50 18L66 43L84 26L75 71H25ZM27 81H73" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/></symbol>
   <symbol id="dice" viewBox="0 0 100 100"><rect x="18" y="18" width="64" height="64" rx="14" fill="none" stroke="currentColor" stroke-width="5"/><g fill="currentColor"><circle cx="34" cy="34" r="5"/><circle cx="66" cy="34" r="5"/><circle cx="50" cy="50" r="5"/><circle cx="34" cy="66" r="5"/><circle cx="66" cy="66" r="5"/></g></symbol>
+  <symbol id="hand" viewBox="0 0 100 100"><path d="M28 52V28a6 6 0 0 1 12 0v20-30a6 6 0 0 1 12 0v30-25a6 6 0 0 1 12 0v28-15a6 6 0 0 1 12 0v28c0 16-10 25-25 25-10 0-16-5-22-13L17 61c-6-8 3-15 9-8l8 9" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <use href="#seven"/>
 </svg>

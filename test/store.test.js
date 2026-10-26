@@ -27,7 +27,7 @@ function losingRules() {
   return parseRules(raw);
 }
 
-test('v0.6 stored runs still replay while new deployments use two coins and auto clear', (t) => {
+test('v0.6 stored runs still replay while new deployments use three coins and auto clear', (t) => {
   const raw = rawRules(); raw.balance.round.roundTargets[0].targetScore = '1';
   const { store, open } = fixture(t, parseRules(raw));
   const id = store.createRun('alice', 'legacy').state.runId;
@@ -38,7 +38,7 @@ test('v0.6 stored runs still replay while new deployments use two coins and auto
   assert.deepEqual(upgraded.execute('alice', id, cmd('SPIN', 0)), previous);
   assert.equal(upgraded.getRun('alice', id).state.canClaim, true);
   assert.equal(upgraded.execute('alice', id, cmd('CLAIM', 1)).state.coins, 5);
-  assert.equal(upgraded.createRun('alice', 'current').state.coins, 2);
+  assert.equal(upgraded.createRun('alice', 'current').state.coins, 3);
 });
 
 test('disk restart restores state, RNG, idempotent responses and server-issued authentication', (t) => {

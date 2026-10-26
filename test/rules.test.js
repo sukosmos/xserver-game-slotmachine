@@ -5,7 +5,7 @@ import { loadRules } from '../src/server/load-rules.js';
 import { rules, rawRules } from './helpers.js';
 
 test('load and freeze all three catalogs; compile scores to BigInt', () => {
-  assert.equal(rules.catalog.items.length, 27);
+  assert.equal(rules.catalog.items.length, 28);
   assert.equal(rules.lines.length, 8);
   assert.equal(rules.symbolsById.seven.linePayout, 1500n);
   assert.equal(getItem(rules, 'miracle_hand').effect.triggerChanceBasisPoints, 800);
@@ -19,6 +19,12 @@ test('load and freeze all three catalogs; compile scores to BigInt', () => {
 });
 
 const invalidCases = [
+  ['negative reward growth', (r) => { r.balance.economy.clearRewardPerRound = -1; }],
+  ['fractional Hand cap', (r) => { r.balance.round.maxExtraHands = 1.5; }],
+  ['unsafe total Hands', (r) => { r.balance.round.maxExtraHands = Number.MAX_SAFE_INTEGER; }],
+  ['missing Hand cap', (r) => { delete r.balance.round.maxExtraHands; }],
+  ['invalid shop unlock', (r) => { r.catalog.items[0].minShopRound = 0; }],
+  ['timed Hand item', (r) => { const i = r.catalog.items.find((i) => i.id === 'extra_hand'); i.slot = 'timed'; i.durationSpins = 2; }],
   ['zero symbol weight', (r) => { r.balance.symbols[0].weight = 0; }],
   ['negative symbol weight', (r) => { r.balance.symbols[0].weight = -1; }],
   ['fractional weight', (r) => { r.balance.symbols[0].weight = 1.1; }],

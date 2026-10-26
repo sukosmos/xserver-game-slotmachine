@@ -35,7 +35,7 @@ export function simulateRuns(rules, { trials = 10000, seed = 'nine-phase5-v1', s
         else action = { type: 'CONTINUE' };
       }
       const result = applyAction(state, action, rules, rng); state = result.state; actions++;
-      requireCondition(Number.isSafeInteger(state.coins) && state.coins >= 0 && state.handsRemaining >= 0 && state.handsRemaining <= rules.balance.round.baseHands, 'SIMULATION_INVARIANT');
+      requireCondition(Number.isSafeInteger(state.coins) && state.coins >= 0 && state.handsRemaining >= 0 && state.handsRemaining <= (state.roundHands ?? rules.balance.round.baseHands), 'SIMULATION_INVARIANT');
       peakCoins = Math.max(peakCoins, state.coins);
       if (action.type === 'SPIN') spins++;
       if (result.event.settlement) {

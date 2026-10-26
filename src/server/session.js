@@ -28,6 +28,7 @@ function publicState(runId, state, rules) {
     phase: state.phase, roundIndex: state.roundIndex, completedRounds: state.completedRounds,
     roundScore: state.roundScore, runTotalScore: state.runTotalScore, targetScore: state.targetScore,
     handsRemaining: state.handsRemaining, canClaim: canClaim(state), revision: state.revision,
+    ...(state.roundHands !== undefined ? { roundHands: state.roundHands } : {}),
     items: state.items.map(({ instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins }) => ({
       instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins,
     })),

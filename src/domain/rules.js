@@ -66,10 +66,12 @@ const effectSpecs = {
   one_free_reroll_per_shop: ['economy', ['amount']],
   shop_item_cost_subtract: ['economy', ['amount', 'minPrice']],
   chance_coins_on_clear: ['economy', ['triggerChanceBasisPoints', 'coins']],
+  round_hands_add: ['resource', ['amount']],
 };
 
 function validateItem(item, path) {
-  keys(item, ['id', 'nameKo', 'rarity', 'price', 'category', 'slot', 'maxStacks', 'effect'], ['initialCharges', 'durationSpins'], path);
+  keys(item, ['id', 'nameKo', 'rarity', 'price', 'category', 'slot', 'maxStacks', 'effect'], ['initialCharges', 'durationSpins', 'minShopRound'], path);
+  if (Object.hasOwn(item, 'minShopRound')) integer(item.minShopRound, `${path}.minShopRound`, 1);
   id(item.id, `${path}.id`);
   text(item.nameKo, `${path}.nameKo`);
   oneOf(item.rarity, rarities, `${path}.rarity`);
@@ -86,7 +88,7 @@ function validateItem(item, path) {
   check(Object.hasOwn(effectSpecs, effect.kind), `${path}.effect.kind`, 'unknown effect kind');
   const [category, required, optional = []] = effectSpecs[effect.kind];
   literal(item.category, category, `${path}.category`);
-  if (category === 'economy') literal(item.slot, 'permanent', `${path}.slot`);
+  if (['economy', 'resource'].includes(category)) literal(item.slot, 'permanent', `${path}.slot`);
   keys(effect, ['kind', ...required], optional, `${path}.effect`);
   for (const [key, value] of Object.entries(effect)) {
     const field = `${path}.effect.${key}`;
@@ -134,9 +136,10 @@ export function parseRules(input) {
   check(balance.symbols.reduce((sum, symbol) => sum + symbol.weight, 0) <= MAX_RANDOM_BOUND, 'balance.symbols', 'weight total exceeds RNG range');
 
   const round = balance.round;
-  keys(round, ['baseHands', 'maxRoundMvp', 'roundTargets', 'carryRoundScore', 'carryCoins', 'carryItems'], ['autoClearOnTarget'], 'balance.round');
+  keys(round, ['baseHands', 'maxRoundMvp', 'roundTargets', 'carryRoundScore', 'carryCoins', 'carryItems'], ['autoClearOnTarget', 'maxExtraHands'], 'balance.round');
   if (Object.hasOwn(round, 'autoClearOnTarget')) literal(round.autoClearOnTarget, true, 'balance.round.autoClearOnTarget');
   integer(round.baseHands, 'balance.round.baseHands', 1);
+  if (Object.hasOwn(round, 'maxExtraHands')) integer(round.maxExtraHands, 'balance.round.maxExtraHands', 0, Number.MAX_SAFE_INTEGER - round.baseHands);
   integer(round.maxRoundMvp, 'balance.round.maxRoundMvp', 1);
   literal(round.carryRoundScore, false, 'balance.round.carryRoundScore');
   literal(round.carryCoins, true, 'balance.round.carryCoins');
@@ -151,7 +154,8 @@ export function parseRules(input) {
   }
 
   const economicFields = ['startingCoins', 'baseClearReward', 'unusedHandReward', 'interestPerCoins', 'interestCap', 'failedRoundReward'];
-  keys(balance.economy, economicFields, [], 'balance.economy');
+  keys(balance.economy, economicFields, ['clearRewardPerRound'], 'balance.economy');
+  if (Object.hasOwn(balance.economy, 'clearRewardPerRound')) integer(balance.economy.clearRewardPerRound, 'balance.economy.clearRewardPerRound');
   for (const key of economicFields) integer(balance.economy[key], `balance.economy.${key}`, key === 'interestPerCoins' ? 1 : 0);
   literal(balance.economy.failedRoundReward, 0, 'balance.economy.failedRoundReward');
   const shop = balance.shop;
@@ -206,6 +210,7 @@ export function parseRules(input) {
   array(catalog.items, 'catalog.items');
   check(catalog.items.length > 0, 'catalog.items', 'empty catalog');
   for (const [index, item] of catalog.items.entries()) validateItem(item, `catalog.items[${index}]`);
+  if (catalog.items.some((item) => item.effect.kind === 'round_hands_add')) integer(round.maxExtraHands, 'balance.round.maxExtraHands', 1);
   unique(catalog.items.map((item) => item.id), 'catalog.items');
   const symbols = balance.symbols.map((symbol) => ({ ...symbol, basePoint: exactInteger(symbol.basePoint), linePayout: exactInteger(symbol.linePayout) }));
   return deepFreeze({

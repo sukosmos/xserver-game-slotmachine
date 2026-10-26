@@ -3,6 +3,7 @@ import { spinWithItems } from './items.js';
 import { createInventory, acquireItem } from './inventory.js';
 import { calculateClearReward } from './economy.js';
 import { createShop, buyItem, rerollShop, discardShopItem } from './shop.js';
+import { roundHands } from './hands.js';
 
 /** @typedef {{ type: 'SPIN' | 'CLAIM' | 'CONTINUE' | 'REROLL' } | { type: 'BUY', slotId: string } | { type: 'DISCARD', instanceId: string }} RunAction */
 
@@ -21,11 +22,13 @@ export function validateAction(action, code = 'INVALID_ACTION') {
 export function createRun(rules, { initialItemIds = [] } = {}) {
   requireCondition(Array.isArray(initialItemIds), 'INVALID_INVENTORY');
   const inventory = initialItemIds.reduce((current, id) => acquireItem(current, id, rules, { activeFromRound: 1 }), createInventory());
+  const hands = roundHands(rules, inventory.items, 1);
   return {
     rulesVersion: rules.rulesVersion, catalogVersion: rules.catalogVersion, linesVersion: rules.linesVersion,
     phase: 'ROUND_ACTIVE', roundIndex: 1, completedRounds: 0,
     roundScore: 0n, runTotalScore: 0n, targetScore: rules.targets[0],
-    handsRemaining: rules.balance.round.baseHands, revision: 0,
+    handsRemaining: hands, revision: 0,
+    ...(rules.balance.round.maxExtraHands !== undefined ? { roundHands: hands } : {}),
     ...inventory, consecutiveWinHands: 0, coins: rules.balance.economy.startingCoins, shop: null,
   };
 }
@@ -97,7 +100,8 @@ export function applyAction(previous, action, rules, rng) {
     state.roundIndex += 1;
     state.roundScore = 0n;
     state.targetScore = rules.targets[state.roundIndex - 1];
-    state.handsRemaining = rules.balance.round.baseHands;
+    state.handsRemaining = roundHands(rules, state.items, state.roundIndex);
+    if (rules.balance.round.maxExtraHands !== undefined) state.roundHands = state.handsRemaining;
     state.phase = 'ROUND_ACTIVE';
     state.shop = null;
     event = { type: 'ROUND_STARTED', roundIndex: state.roundIndex };

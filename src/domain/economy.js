@@ -8,7 +8,8 @@ import { drawInt } from './random-draw.js';
 export function calculateClearReward(state, rules, rng) {
   const coinsBefore = assertCoins(state.coins);
   requireCondition(Number.isSafeInteger(state.handsRemaining) && state.handsRemaining >= 0
-    && state.handsRemaining <= rules.balance.round.baseHands, 'INVALID_HANDS');
+    && state.handsRemaining <= (state.roundHands ?? rules.balance.round.baseHands), 'INVALID_HANDS');
+  requireCondition(Number.isSafeInteger(state.roundIndex) && state.roundIndex >= 1 && state.roundIndex <= rules.balance.round.maxRoundMvp, 'INVALID_ROUND');
   const active = activeItems(state.items, rules, state.roundIndex).filter((instance) => getItem(rules, instance.itemId).slot === 'permanent');
   const economy = rules.balance.economy;
   let itemBaseBonus = 0n;
@@ -18,7 +19,7 @@ export function calculateClearReward(state, rules, rng) {
     if (effect.kind === 'clear_base_coins_add') itemBaseBonus += BigInt(effect.amount);
     if (effect.kind === 'interest_cap_add') cap += BigInt(effect.amount);
   }
-  const baseReward = BigInt(economy.baseClearReward);
+  const baseReward = BigInt(economy.baseClearReward) + BigInt(state.roundIndex - 1) * BigInt(economy.clearRewardPerRound ?? 0);
   const handBonus = BigInt(state.handsRemaining) * BigInt(economy.unusedHandReward);
   const earnedInterest = BigInt(coinsBefore) / BigInt(economy.interestPerCoins);
   const interest = earnedInterest < cap ? earnedInterest : cap;

@@ -1,0 +1,268 @@
+{
+  "rulesVersion": "v0.8",
+  "trials": 10000,
+  "seed": "nine-phase5-v1",
+  "policy": "claim-early-buy-non-economy-cheapest-v1",
+  "won": 0,
+  "failed": 10000,
+  "spins": 115124,
+  "actions": 171982,
+  "peakCoins": 13,
+  "meanRunScore": "1071.26",
+  "maxRunScore": "21450",
+  "rounds": [
+    {
+      "round": 1,
+      "target": "120",
+      "attempts": 10000,
+      "clears": 9974,
+      "conditionalClearRate": 0.9974,
+      "meanRewardPerClear": "3.96",
+      "totalRewards": "39561",
+      "totalPurchaseSpend": "57840",
+      "totalRerollSpend": "1746"
+    },
+    {
+      "round": 2,
+      "target": "240",
+      "attempts": 9974,
+      "clears": 7137,
+      "conditionalClearRate": 0.7155604571886905,
+      "meanRewardPerClear": "4.86",
+      "totalRewards": "34746",
+      "totalPurchaseSpend": "33336",
+      "totalRerollSpend": "858"
+    },
+    {
+      "round": 3,
+      "target": "525",
+      "attempts": 7137,
+      "clears": 2553,
+      "conditionalClearRate": 0.3577133249264397,
+      "meanRewardPerClear": "5.59",
+      "totalRewards": "14290",
+      "totalPurchaseSpend": "13802",
+      "totalRerollSpend": "518"
+    },
+    {
+      "round": 4,
+      "target": "1140",
+      "attempts": 2553,
+      "clears": 222,
+      "conditionalClearRate": 0.08695652173913043,
+      "meanRewardPerClear": "7.04",
+      "totalRewards": "1565",
+      "totalPurchaseSpend": "1492",
+      "totalRerollSpend": "61"
+    },
+    {
+      "round": 5,
+      "target": "2850",
+      "attempts": 222,
+      "clears": 8,
+      "conditionalClearRate": 0.036036036036036036,
+      "meanRewardPerClear": "8.75",
+      "totalRewards": "70",
+      "totalPurchaseSpend": "63",
+      "totalRerollSpend": "5"
+    },
+    {
+      "round": 6,
+      "target": "7125",
+      "attempts": 8,
+      "clears": 0,
+      "conditionalClearRate": 0,
+      "meanRewardPerClear": null,
+      "totalRewards": "0",
+      "totalPurchaseSpend": "0",
+      "totalRerollSpend": "0"
+    },
+    {
+      "round": 7,
+      "target": "17100",
+      "attempts": 0,
+      "clears": 0,
+      "conditionalClearRate": null,
+      "meanRewardPerClear": null,
+      "totalRewards": "0",
+      "totalPurchaseSpend": "0",
+      "totalRerollSpend": "0"
+    },
+    {
+      "round": 8,
+      "target": "42750",
+      "attempts": 0,
+      "clears": 0,
+      "conditionalClearRate": null,
+      "meanRewardPerClear": null,
+      "totalRewards": "0",
+      "totalPurchaseSpend": "0",
+      "totalRerollSpend": "0"
+    },
+    {
+      "round": 9,
+      "target": "114000",
+      "attempts": 0,
+      "clears": 0,
+      "conditionalClearRate": null,
+      "meanRewardPerClear": null,
+      "totalRewards": "0",
+      "totalPurchaseSpend": "0",
+      "totalRerollSpend": "0"
+    },
+    {
+      "round": 10,
+      "target": "285000",
+      "attempts": 0,
+      "clears": 0,
+      "conditionalClearRate": null,
+      "meanRewardPerClear": null,
+      "totalRewards": "0",
+      "totalPurchaseSpend": "0",
+      "totalRerollSpend": "0"
+    }
+  ],
+  "items": {
+    "cherry_farm": {
+      "purchases": 857,
+      "activeRounds": 864,
+      "clearedActiveRounds": 60
+    },
+    "lemon_orchard": {
+      "purchases": 901,
+      "activeRounds": 898,
+      "clearedActiveRounds": 61
+    },
+    "bell_foundry": {
+      "purchases": 699,
+      "activeRounds": 733,
+      "clearedActiveRounds": 57
+    },
+    "gem_mine": {
+      "purchases": 63,
+      "activeRounds": 66,
+      "clearedActiveRounds": 3
+    },
+    "sevens_blessing": {
+      "purchases": 35,
+      "activeRounds": 40,
+      "clearedActiveRounds": 5
+    },
+    "golden_harvest": {
+      "purchases": 8830,
+      "activeRounds": 12347,
+      "clearedActiveRounds": 5875
+    },
+    "lemon_syrup": {
+      "purchases": 7773,
+      "activeRounds": 11330,
+      "clearedActiveRounds": 5232
+    },
+    "resonance_hammer": {
+      "purchases": 6606,
+      "activeRounds": 9788,
+      "clearedActiveRounds": 4296
+    },
+    "gem_appraiser": {
+      "purchases": 599,
+      "activeRounds": 948,
+      "clearedActiveRounds": 362
+    },
+    "lucky_crown": {
+      "purchases": 318,
+      "activeRounds": 482,
+      "clearedActiveRounds": 167
+    },
+    "miracle_hand": {
+      "purchases": 249,
+      "activeRounds": 416,
+      "clearedActiveRounds": 183
+    },
+    "joker_mask": {
+      "purchases": 310,
+      "activeRounds": 346,
+      "clearedActiveRounds": 223
+    },
+    "broken_lever": {
+      "purchases": 579,
+      "activeRounds": 904,
+      "clearedActiveRounds": 337
+    },
+    "scammers_card": {
+      "purchases": 559,
+      "activeRounds": 675,
+      "clearedActiveRounds": 293
+    },
+    "future_mirror": {
+      "purchases": 123,
+      "activeRounds": 191,
+      "clearedActiveRounds": 69
+    },
+    "magnet_device": {
+      "purchases": 293,
+      "activeRounds": 417,
+      "clearedActiveRounds": 187
+    },
+    "calculated_miracle": {
+      "purchases": 30,
+      "activeRounds": 45,
+      "clearedActiveRounds": 22
+    },
+    "volatile_joker": {
+      "purchases": 121,
+      "activeRounds": 218,
+      "clearedActiveRounds": 115
+    },
+    "resonant_bell": {
+      "purchases": 81,
+      "activeRounds": 126,
+      "clearedActiveRounds": 45
+    },
+    "jackpot_crown": {
+      "purchases": 0,
+      "activeRounds": 0,
+      "clearedActiveRounds": 0
+    },
+    "devils_contract": {
+      "purchases": 3,
+      "activeRounds": 6,
+      "clearedActiveRounds": 3
+    },
+    "win_streak": {
+      "purchases": 262,
+      "activeRounds": 474,
+      "clearedActiveRounds": 212
+    },
+    "piggy_bank": {
+      "purchases": 3538,
+      "activeRounds": 5456,
+      "clearedActiveRounds": 2251
+    },
+    "compound_magic": {
+      "purchases": 71,
+      "activeRounds": 102,
+      "clearedActiveRounds": 31
+    },
+    "vip_pass": {
+      "purchases": 179,
+      "activeRounds": 281,
+      "clearedActiveRounds": 102
+    },
+    "haggler": {
+      "purchases": 0,
+      "activeRounds": 0,
+      "clearedActiveRounds": 0
+    },
+    "lucky_payday": {
+      "purchases": 200,
+      "activeRounds": 314,
+      "clearedActiveRounds": 114
+    },
+    "extra_hand": {
+      "purchases": 395,
+      "activeRounds": 697,
+      "clearedActiveRounds": 309
+    }
+  },
+  "interpretation": "Fixed-policy sample. Item possession and clears are correlated observations, not isolated causal item strength. No balance values changed."
+}

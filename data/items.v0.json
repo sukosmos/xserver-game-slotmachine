@@ -1,5 +1,5 @@
 {
-  "version": "v0.7",
+  "version": "v0.8",
   "chanceUnits": "basis_points: 10000 = 100%",
   "items": [
     {
@@ -14,7 +14,8 @@
         "kind": "weight_add",
         "symbol": "cherry",
         "amount": 10
-      }
+      },
+      "minShopRound": 3
     },
     {
       "id": "lemon_orchard",
@@ -28,7 +29,8 @@
         "kind": "weight_add",
         "symbol": "lemon",
         "amount": 9
-      }
+      },
+      "minShopRound": 3
     },
     {
       "id": "bell_foundry",
@@ -42,7 +44,8 @@
         "kind": "weight_add",
         "symbol": "bell",
         "amount": 8
-      }
+      },
+      "minShopRound": 3
     },
     {
       "id": "gem_mine",
@@ -56,7 +59,8 @@
         "kind": "weight_add",
         "symbol": "diamond",
         "amount": 6
-      }
+      },
+      "minShopRound": 3
     },
     {
       "id": "sevens_blessing",
@@ -70,7 +74,8 @@
         "kind": "weight_add",
         "symbol": "seven",
         "amount": 4
-      }
+      },
+      "minShopRound": 3
     },
     {
       "id": "golden_harvest",
@@ -425,6 +430,19 @@
         "kind": "chance_coins_on_clear",
         "triggerChanceBasisPoints": 2500,
         "coins": 3
+      }
+    },
+    {
+      "id": "extra_hand",
+      "nameKo": "여분의 손",
+      "rarity": "rare",
+      "price": 5,
+      "category": "resource",
+      "slot": "permanent",
+      "maxStacks": 2,
+      "effect": {
+        "kind": "round_hands_add",
+        "amount": 1
       }
     }
   ]
