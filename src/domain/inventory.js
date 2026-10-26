@@ -1,0 +1,97 @@
+import { requireCondition } from './errors.js';
+import { getItem } from './rules.js';
+
+const positiveInteger = (value) => Number.isSafeInteger(value) && value > 0;
+
+export function createInventory() { return { items: [], nextItemOrder: 1 }; }
+
+export function inventoryUsage(items, rules) {
+  const permanent = new Set();
+  let limited = 0;
+  for (const instance of items) {
+    if (getItem(rules, instance.itemId).slot === 'permanent') permanent.add(instance.itemId);
+    else limited += 1;
+  }
+  return { permanent: permanent.size, limited };
+}
+
+export function validateItems(items, rules) {
+  requireCondition(Array.isArray(items), 'INVALID_INVENTORY');
+  const ids = new Set();
+  const copies = new Map();
+  for (const instance of items) {
+    requireCondition(instance !== null && typeof instance === 'object' && !Array.isArray(instance), 'INVALID_ITEM_INSTANCE');
+    const item = getItem(rules, instance.itemId);
+    const fields = ['instanceId', 'itemId', 'acquiredOrder', 'activeFromRound'];
+    if (item.slot === 'charged') fields.push('remainingCharges');
+    if (item.slot === 'timed') fields.push('remainingSpins');
+    requireCondition(Object.keys(instance).length === fields.length && fields.every((field) => Object.hasOwn(instance, field)), 'INVALID_ITEM_INSTANCE');
+    requireCondition(typeof instance.instanceId === 'string' && instance.instanceId.length > 0 && !ids.has(instance.instanceId), 'INVALID_ITEM_INSTANCE');
+    requireCondition(positiveInteger(instance.acquiredOrder) && positiveInteger(instance.activeFromRound), 'INVALID_ITEM_INSTANCE');
+    if (item.slot === 'charged') requireCondition(positiveInteger(instance.remainingCharges) && instance.remainingCharges <= item.initialCharges, 'INVALID_ITEM_INSTANCE');
+    if (item.slot === 'timed') requireCondition(positiveInteger(instance.remainingSpins) && instance.remainingSpins <= item.durationSpins, 'INVALID_ITEM_INSTANCE');
+    ids.add(instance.instanceId);
+    const count = (copies.get(item.id) ?? 0) + 1;
+    requireCondition(count <= item.maxStacks, 'ITEM_CAP_REACHED');
+    copies.set(item.id, count);
+  }
+  const usage = inventoryUsage(items, rules);
+  requireCondition(usage.permanent <= rules.balance.shop.basePermanentItemSlots && usage.limited <= rules.balance.shop.baseLimitedItemSlots, 'INVENTORY_FULL');
+}
+
+function validateInventory(inventory, rules) {
+  requireCondition(inventory !== null && typeof inventory === 'object', 'INVALID_INVENTORY');
+  validateItems(inventory.items, rules);
+  requireCondition(positiveInteger(inventory.nextItemOrder) && inventory.items.every((item) => item.acquiredOrder < inventory.nextItemOrder), 'INVALID_INVENTORY');
+}
+
+/** Pure server-side acquisition primitive. Phase 3 supplies the next active round. */
+export function acquireItem(inventory, itemId, rules, { activeFromRound } = {}) {
+  validateInventory(inventory, rules);
+  requireCondition(positiveInteger(activeFromRound), 'INVALID_ACTIVE_ROUND');
+  requireCondition(inventory.nextItemOrder < Number.MAX_SAFE_INTEGER, 'ITEM_ORDER_EXHAUSTED');
+  const item = getItem(rules, itemId);
+  const instance = { instanceId: `item-${inventory.nextItemOrder}`, itemId, acquiredOrder: inventory.nextItemOrder, activeFromRound };
+  if (item.slot === 'charged') instance.remainingCharges = item.initialCharges;
+  if (item.slot === 'timed') instance.remainingSpins = item.durationSpins;
+  const items = [...inventory.items.map((entry) => ({ ...entry })), instance];
+  validateItems(items, rules);
+  return { items, nextItemOrder: inventory.nextItemOrder + 1 };
+}
+
+export function discardItem(inventory, instanceId, rules) {
+  validateInventory(inventory, rules);
+  requireCondition(inventory.items.some((item) => item.instanceId === instanceId), 'UNKNOWN_ITEM_INSTANCE');
+  return { items: inventory.items.filter((item) => item.instanceId !== instanceId).map((item) => ({ ...item })), nextItemOrder: inventory.nextItemOrder };
+}
+
+// Locale-independent tie breaking keeps replay identical on all servers.
+const compareText = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+export function acquisitionOrder(a, b) {
+  return a.acquiredOrder - b.acquiredOrder || compareText(a.itemId, b.itemId) || compareText(a.instanceId, b.instanceId);
+}
+
+export function activeItems(items, rules, roundIndex) {
+  validateItems(items, rules);
+  requireCondition(positiveInteger(roundIndex), 'INVALID_ROUND');
+  return items.filter((item) => item.activeFromRound <= roundIndex).sort(acquisitionOrder);
+}
+
+export function finishItemSpin(items, active, triggeredIds, rules) {
+  const activeIds = new Set(active.map((item) => item.instanceId));
+  const expiredItems = [];
+  const itemsAfterSpin = items.flatMap((original) => {
+    const item = { ...original };
+    if (activeIds.has(item.instanceId)) {
+      const { slot } = getItem(rules, item.itemId);
+      if (slot === 'timed') item.remainingSpins -= 1;
+      if (slot === 'charged' && triggeredIds.has(item.instanceId)) item.remainingCharges -= 1;
+      if (item.remainingSpins === 0 || item.remainingCharges === 0) {
+        expiredItems.push({ instanceId: item.instanceId, itemId: item.itemId });
+        return [];
+      }
+    }
+    return [item];
+  });
+  return { itemsAfterSpin, expiredItems };
+}

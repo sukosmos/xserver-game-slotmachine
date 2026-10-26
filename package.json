@@ -1,0 +1,22 @@
+{
+  "name": "slot-roguelite",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "NINE TO RUIN — Phase 4 persistent game API and leaderboard",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node scripts/server.js",
+    "account:create": "node scripts/account.js create",
+    "account:revoke": "node scripts/account.js revoke",
+    "test": "node --test test/*.test.js",
+    "test:balance": "node --test test/balance.simulation.js",
+    "test:items": "node --test test/items.simulation.js",
+    "validate:specs": "node scripts/validate-specs.js",
+    "check": "npm run validate:specs && npm test",
+    "demo": "node scripts/demo.js",
+    "demo:items": "node scripts/demo.js --items",
+    "demo:shop": "node scripts/demo.js --shop",
+    "simulate": "node scripts/simulate.js"
+  }
+}

@@ -9,6 +9,7 @@
 6. 구현/보안: [06](06-ARCHITECTURE.md), [07](07-API_DATA_MODEL.md)
 7. 개발 체크리스트: [08](08-IMPLEMENTATION_PLAN.md), [09](09-TEST_CASES.md)
 8. 잠정 사항: [10](10-DECISIONS.md), UI: [11](11-UX_FLOW.md)
+9. 로컬 API 서버 실행/복구: [13](13-LOCAL_SERVER.md)
 
 ## 상태 표기
 - **확정:** 대화에서 방향이 정해진 내용.

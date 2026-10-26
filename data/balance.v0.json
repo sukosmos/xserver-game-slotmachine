@@ -1,5 +1,5 @@
 {
-  "version": "v0.4",
+  "version": "v0.6",
   "status": "prototype_values_not_final",
   "board": {
     "rows": 3,
@@ -115,7 +115,12 @@
     "allowDuplicateIdsInSameOffer": false,
     "basePermanentItemSlots": 8,
     "baseLimitedItemSlots": 2,
-    "discountPriceFloor": 1
+    "discountPriceFloor": 1,
+    "offerSelection": "rarity_then_uniform_without_replacement",
+    "excludeFullInventoryItems": false,
+    "allowPreviousOfferItems": true,
+    "emptySlotsOnPoolExhaustion": true,
+    "vipActivation": "next_round"
   },
   "itemRules": {
     "oneBoardModifierPerHand": true,
@@ -123,7 +128,16 @@
     "stackSameItemPayoutBonusesAdditively": true,
     "perLineRounding": "floor",
     "globalMultiplierRounding": "floor",
-    "maxScoreFormat": "decimal_string"
+    "maxScoreFormat": "decimal_string",
+    "boardModifierPriority": [
+      "reroll_last_column",
+      "best_candidate_edit",
+      "random_candidate_edit",
+      "seven_transform"
+    ],
+    "bestCandidateTieBreak": "line_definition_order",
+    "bestCandidateVirtualRolls": "shared_lazy_per_spin",
+    "consecutiveWinsCarryAcrossRounds": true
   },
   "ranking": {
     "sortOrder": [

@@ -24,7 +24,7 @@
 ## 2.3 당첨과 점수
 1. **심벌 기본 점수(baseScore):** 최종 보드 9칸의 개별 점수 합산. 조커 와일드는 중앙 칸의 원래 심벌 개별 점수를 사용.
 2. **라인 배당(lineScore):** 완성된 각 라인에 대해 심벌의 3일치 기본 배당 지급. 서로 겹치는 라인도 각각 독립 지급.
-3. **전용 배당 아이템:** 같은 심벌 전용 아이템은 합연산 방식, `factor = 1 + sum(item.addFactor × copies)`; 각 라인마다 `floor(basePayout × factor × perLineSpecialFactors)`.
+3. **전용 배당 아이템:** 같은 심벌 전용 아이템은 합연산 방식, `factor = 1 + sum((item.effect.extraFactor.num / item.effect.extraFactor.den) × copies)`; 각 라인마다 `floor(basePayout × factor × perLineSpecialFactors)`.
 4. **전역 배율:** `floor((baseScore + sum(lineScores) + virtualLineBonuses) × product(globalMultipliers))`.
 5. 최종 점수는 음수가 될 수 없다. 일단 세부 정수 내림 지점은 단계 3과 4의 위 규정으로 통일.
 
@@ -64,3 +64,5 @@
 
 ## 2.6 난이도 검증 메모
 기본 4 Hand, 아이템 없음, 8라인, 5심벌 독립 추첨의 단순 Monte Carlo(2026-10-25 계산)에서 첫 라운드 목표 **120점** 통과율은 대략 **90%**. 반면 옛 초안 목표 200점은 대략 **49%**로 지나치게 어려워 120점으로 수정. 이는 실제 밸런스 보장이 아닌 난수 시뮬레이션 추정이므로 테스트를 재실행할 것.
+
+Phase 0~1 실제 엔진의 고정 시드 100,000라운드 재검증 결과는 **90.671%**였다. 실행법은 `npm run test:balance`, 표본/관측 분포/한계는 `09-TEST_CASES.md` 9.6을 참고한다.
