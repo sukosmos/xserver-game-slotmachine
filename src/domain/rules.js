@@ -134,7 +134,8 @@ export function parseRules(input) {
   check(balance.symbols.reduce((sum, symbol) => sum + symbol.weight, 0) <= MAX_RANDOM_BOUND, 'balance.symbols', 'weight total exceeds RNG range');
 
   const round = balance.round;
-  keys(round, ['baseHands', 'maxRoundMvp', 'roundTargets', 'carryRoundScore', 'carryCoins', 'carryItems'], [], 'balance.round');
+  keys(round, ['baseHands', 'maxRoundMvp', 'roundTargets', 'carryRoundScore', 'carryCoins', 'carryItems'], ['autoClearOnTarget'], 'balance.round');
+  if (Object.hasOwn(round, 'autoClearOnTarget')) literal(round.autoClearOnTarget, true, 'balance.round.autoClearOnTarget');
   integer(round.baseHands, 'balance.round.baseHands', 1);
   integer(round.maxRoundMvp, 'balance.round.maxRoundMvp', 1);
   literal(round.carryRoundScore, false, 'balance.round.carryRoundScore');

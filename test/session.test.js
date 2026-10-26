@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GameSession, replayAudit } from '../src/server/session.js';
 import { parseRules } from '../src/domain/rules.js';
-import { rules, rawRules, seed } from './helpers.js';
+import { legacyRules as rules, rawLegacyRules as rawRules, seed } from './helpers.js';
 
 const owner = 'server-authenticated-user';
 const create = (config = rules) => new GameSession(config, { userId: owner, runId: 'test-run', seed });

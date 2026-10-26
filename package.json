@@ -1,11 +1,12 @@
 {
   "name": "slot-roguelite",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
-  "description": "NINE TO RUIN — Phase 4 persistent game API and leaderboard",
+  "description": "NINE TO RUIN — server-authoritative slot roguelite with a playable web UI",
   "engines": { "node": ">=22.13" },
   "scripts": {
+    "play": "node scripts/server.js --local-play",
     "start": "node scripts/server.js",
     "account:create": "node scripts/account.js create",
     "account:revoke": "node scripts/account.js revoke",
@@ -17,6 +18,7 @@
     "demo": "node scripts/demo.js",
     "demo:items": "node scripts/demo.js --items",
     "demo:shop": "node scripts/demo.js --shop",
-    "simulate": "node scripts/simulate.js"
+    "simulate": "node scripts/simulate.js",
+    "simulate:runs": "node scripts/simulate-runs.js"
   }
 }

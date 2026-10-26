@@ -45,6 +45,7 @@ export function checkDocumentation(rules, documents) {
 
   const decisions = rows(doc('docs/10-DECISIONS.md')).map((row) => row.map(clean));
   const { round, economy, shop } = rules.balance;
+  assert.ok(core.includes(`handsRemaining=${round.baseHands}`), 'Hand count documentation drift');
   const decisionValues = {
     '기본 Hand': `${round.baseHands}회`, '초기 Coin': `${economy.startingCoins}`, '클리어 기본': `${economy.baseClearReward}`,
     '남은 Hand': `+${economy.unusedHandReward} coin/Hand`, '이자': `${economy.interestPerCoins}코인당 +1, 최대${economy.interestCap}`,
@@ -79,6 +80,8 @@ export function checkDocumentation(rules, documents) {
     }
   }
   const economyText = doc('docs/04-ECONOMY_SHOP.md');
+  assert.ok(economyText.includes(`첫 라운드 시작 시 ${economy.startingCoins}코인`), 'starting coins documentation drift');
+  if (round.autoClearOnTarget) assert.ok(core.includes('**자동 정산**'), 'automatic settlement documentation drift');
   const economyRows = rows(economyText).map((row) => row.map(clean));
   for (const item of rules.catalog.items.filter((item) => item.category === 'economy')) {
     const row = economyRows.find((cells) => cells[0] === `${item.id} ${item.nameKo}`);

@@ -1,5 +1,5 @@
 {
-  "version": "v0.6",
+  "version": "v0.7",
   "status": "prototype_values_not_final",
   "board": {
     "rows": 3,
@@ -44,7 +44,8 @@
     }
   ],
   "round": {
-    "baseHands": 4,
+    "autoClearOnTarget": true,
+    "baseHands": 5,
     "maxRoundMvp": 10,
     "roundTargets": [
       {
@@ -53,39 +54,39 @@
       },
       {
         "round": 2,
-        "targetScore": "250"
+        "targetScore": "240"
       },
       {
         "round": 3,
-        "targetScore": "550"
+        "targetScore": "525"
       },
       {
         "round": 4,
-        "targetScore": "1200"
+        "targetScore": "1140"
       },
       {
         "round": 5,
-        "targetScore": "3000"
+        "targetScore": "2850"
       },
       {
         "round": 6,
-        "targetScore": "7500"
+        "targetScore": "7125"
       },
       {
         "round": 7,
-        "targetScore": "18000"
+        "targetScore": "17100"
       },
       {
         "round": 8,
-        "targetScore": "45000"
+        "targetScore": "42750"
       },
       {
         "round": 9,
-        "targetScore": "120000"
+        "targetScore": "114000"
       },
       {
         "round": 10,
-        "targetScore": "300000"
+        "targetScore": "285000"
       }
     ],
     "carryRoundScore": false,
@@ -93,7 +94,7 @@
     "carryItems": true
   },
   "economy": {
-    "startingCoins": 0,
+    "startingCoins": 2,
     "baseClearReward": 2,
     "unusedHandReward": 1,
     "interestPerCoins": 5,

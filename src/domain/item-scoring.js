@@ -16,6 +16,22 @@ export function weightedSymbols(rules, items) {
   return symbols;
 }
 
+/** Unconditional per-symbol values, shared by scoring and the server's build view. */
+export function symbolScores(rules, items) {
+  const effects = items.map((instance) => getItem(rules, instance.itemId).effect);
+  return rules.symbols.map((symbol) => {
+    let symbolFactor = rational(1), specialFactor = rational(1);
+    for (const effect of effects) {
+      if (effect.kind === 'symbol_line_add_factor' && effect.symbol === symbol.id) symbolFactor = addRational(symbolFactor, fraction(effect.extraFactor));
+      if (effect.kind === 'conditional_per_line_factor') specialFactor = multiplyRational(specialFactor, fraction(symbol.id === 'seven' ? effect.forSeven : effect.forOther));
+      if (effect.kind === 'zero_base_plus_per_real_line_factor') specialFactor = multiplyRational(specialFactor, fraction(effect.perRealLineFactor));
+    }
+    const lineFactor = multiplyRational(symbolFactor, specialFactor);
+    return { id: symbol.id, point: effects.some((effect) => effect.kind === 'zero_base_plus_per_real_line_factor') ? 0n : symbol.basePoint,
+      lineFactor, linePayout: floorMultiply(symbol.linePayout, lineFactor) };
+  });
+}
+
 /** No RNG or mutation. Preview and final scoring use this same exact path. */
 export function scoreWithItems(board, rules, items, { consecutiveWinHands = 0, virtualScore = 0n, lineBonus = null } = {}) {
   validateBoard(board, rules);
@@ -25,18 +41,12 @@ export function scoreWithItems(board, rules, items, { consecutiveWinHands = 0, v
   const wildCenter = effects.some((effect) => effect.kind === 'wild_center');
   const rawLines = evaluateLines(board, rules, { wildCenter });
   const nextStreak = rawLines.length > 0 ? consecutiveWinHands + 1 : 0;
+  const profiles = new Map(symbolScores(rules, items).map((symbol) => [symbol.id, symbol]));
   const rawBaseScore = board.reduce((sum, symbol) => sum + rules.symbolsById[symbol].basePoint, 0n);
-  const baseScore = effects.some((effect) => effect.kind === 'zero_base_plus_per_real_line_factor') ? 0n : rawBaseScore;
+  const baseScore = board.reduce((sum, symbol) => sum + profiles.get(symbol).point, 0n);
   const winningLines = rawLines.map((line) => {
-    let symbolFactor = rational(1);
-    let specialFactor = rational(1);
-    for (const effect of effects) {
-      if (effect.kind === 'symbol_line_add_factor' && effect.symbol === line.symbol) symbolFactor = addRational(symbolFactor, fraction(effect.extraFactor));
-      if (effect.kind === 'conditional_per_line_factor') specialFactor = multiplyRational(specialFactor, fraction(line.symbol === 'seven' ? effect.forSeven : effect.forOther));
-      if (effect.kind === 'zero_base_plus_per_real_line_factor') specialFactor = multiplyRational(specialFactor, fraction(effect.perRealLineFactor));
-    }
-    if (lineBonus?.lineId === line.lineId) specialFactor = multiplyRational(specialFactor, fraction(lineBonus.factor));
-    const factor = multiplyRational(symbolFactor, specialFactor);
+    let factor = profiles.get(line.symbol).lineFactor;
+    if (lineBonus?.lineId === line.lineId) factor = multiplyRational(factor, fraction(lineBonus.factor));
     return { ...line, basePayout: line.score, factor, score: floorMultiply(line.score, factor) };
   });
   let globalMultiplier = rational(1);

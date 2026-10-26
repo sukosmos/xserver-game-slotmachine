@@ -2,7 +2,7 @@
 
 > 엔드포인트 이름은 **프레임워크 중립의 권장 설계**. 실제 서버에 기존 API 라우팅/인증 체계가 있다면 맞춘다.
 
-**현재 구현 범위:** Phase 4는 아래 REST 경로를 구현했다. `GameStore`가 저장과 복구를 담당하고 내부 `GameSession.execute(userId, command)`가 게임 명령을 검증한다. `userId`는 서버 인증 문맥에서만 전달한다. 액션 응답은 `{state, event}`이며 점수는 십진 문자열, 코인·가격은 안전 정수다. 서버 전용 `initialItemIds`는 테스트 빌드 주입용이며 HTTP에서는 허용하지 않는다. `exportAudit()`의 `slot-audit-v3`에는 비밀 시드와 난수 추첨값이 있어 암호화해 저장하며 외부에 노출하지 않는다. 구버전 감사 포맷은 자동 이관하지 않는다.
+**현재 구현 범위:** Phase 4는 아래 REST 경로를 구현했다. `GameStore`가 저장과 복구를 담당하고 내부 `GameSession.execute(userId, command)`가 게임 명령을 검증한다. `userId`는 서버 인증 문맥에서만 전달한다. 액션 응답은 `{state, event, upgrades}`이며 점수는 십진 문자열, 코인·가격은 안전 정수다. 서버 전용 `initialItemIds`는 테스트 빌드 주입용이며 HTTP에서는 허용하지 않는다. `exportAudit()`의 `slot-audit-v3`에는 비밀 시드와 난수 추첨값이 있어 암호화해 저장하며 외부에 노출하지 않는다. 구버전 감사 포맷은 자동 이관하지 않는다.
 
 ```ts
 type Command = { expectedRevision: number; idempotencyKey: string } & (
@@ -60,16 +60,22 @@ interface RunView {
 소유자, RNG 시드/커서, `nextItemOrder`와 중복 응답 캐시는 서버 내부에만 보관한다. 슬롯 ID는 라운드·진열 세대·위치를 포함하고 리롤/다음 상점에서 바뀐다. 상품 부족으로 비운 칸은 `soldOut: false`, 구매한 칸은 `soldOut: true`이며 둘 다 `itemId/price: null`이다. 구매 후 자동 보충은 없고 리롤로 교체한다. 구매 가능성과 가격은 구매/폐기 후 매번 다시 계산한다.
 
 ## 7.2 구현된 REST API
-모든 `/api/game/v1` 경로에 `Authorization: Bearer <token>`이 필요하다. POST는 `Content-Type: application/json`과 `Idempotency-Key`를 요구한다. 생성 본문은 `{}`, 나머지 액션 본문은 `expectedRevision`과 필요한 slotId/instanceId만 허용한다. type은 경로에서 결정한다. [실행 예제](13-LOCAL_SERVER.md)를 참고한다.
+Phase 5 강화 표 추가: HTTP 생성은 `{state,upgrades}`, 액션은 `{state,event,upgrades}`, 상태 조회도 `upgrades`를 함께 반환한다. `GameSession`과 v3 감사 로그는 기존 응답 구조를 유지한다.
+
+게임 데이터 경로는 `Authorization: Bearer <token>` 또는 로컬 플레이 쿠키가 필요하다. 공개 bootstrap은 모드만 반환한다. 로컬 연결 POST는 동일 출처/loopback를 검증하고 빈 본문만 받으며 idempotency 키를 요구하지 않는다. 게임 명령 POST는 `Content-Type: application/json`과 `Idempotency-Key`를 요구한다. 생성 본문은 `{}`, 나머지 액션 본문은 `expectedRevision`과 필요한 slotId/instanceId만 허용한다. type은 경로에서 결정한다. [실행 예제](13-LOCAL_SERVER.md)를 참고한다.
 
 | 메서드 | URL | 작업/제약 |
 |---|---|---|
+| GET | `/api/game/v1/bootstrap` | 공개 `{localPlay}` 모드 조회 |
+| POST | `/api/game/v1/local-session` | 명시적으로 켠 로컬 플레이만 고정 계정 쿠키 발급/재사용. 일반 모드 404, 다른 Origin 403 |
+| GET | `/api/game/v1/catalog` | 현재 JSON에서 만든 설명·심벌·라인·목표·슬롯·초기 코인 |
+| GET | `/api/game/v1/runs/:id/catalog` | 소유자 확인 후 해당 런에 고정된 규칙의 공개 카탈로그 |
 | GET | `/api/game/v1/me` | 내 불투명 playerId |
 | GET | `/api/game/v1/runs?limit=20` | 내 최신 런 목록; limit 1~100 |
-| POST | `/api/game/v1/runs` | 새 런 생성, Round 1 / Hand 4 / 0 Coin |
-| GET | `/api/game/v1/runs/:id` | `{state,lastEvent,lastSpin,createdAt,updatedAt,endedAt}` 복구; 없는/타인 런은 404 |
+| POST | `/api/game/v1/runs` | 새 런 생성, Round 1 / Hand 5 / 2 Coin |
+| GET | `/api/game/v1/runs/:id` | `{state,upgrades,lastEvent,lastSpin,createdAt,updatedAt,endedAt}` 복구; 없는/타인 런은 404 |
 | POST | `/api/game/v1/runs/:id/spins` | Hand 1 소비, 서버 추첨/아이템/점수 계산 |
-| POST | `/api/game/v1/runs/:id/claim` | 목표 달성 시 조기 성공 정산; **중복 정산 금지** |
+| POST | `/api/game/v1/runs/:id/claim` | 과거 v0.6 런 복구용. v0.7은 성공 스핀에서 자동 정산하므로 호출 불필요 |
 | POST | `/api/game/v1/runs/:id/shop/purchases` | `slotId`로 상품 구매, 돈/슬롯 동시 갱신 |
 | POST | `/api/game/v1/runs/:id/shop/rerolls` | 상품 3칸 재추첨 및 코인 비용 차감 |
 | POST | `/api/game/v1/runs/:id/shop/discards` | `instanceId`로 1개 폐기, 환불 없음 |
@@ -77,6 +83,12 @@ interface RunView {
 | GET | `/api/game/v1/leaderboard?limit=20` | `{entries:[{rank,playerId,runId,completedRounds,runTotalScore,endedAt,rulesVersion}]}`; limit 1~100 |
 
 ### Spin 응답 예시
+`upgrades`는 응답 상태의 revision과 함께 계산하는 표시 전용 정보다. `current`는 현재 라운드, `next`는 SHOP일 때 다음 라운드 미리보기이며 다른 상태에서는 null이다. 각 표는 `roundIndex`, `totalWeight`, `symbols`, `effects`로 구성된다.
+
+심벌 행은 `id`, `basePoint/point`, `baseLinePayout/linePayout`, `baseWeight/weight`, `baseProbability/probability`, `sources:[{itemId,stacks}]`다. 점수는 정확한 십진 문자열, 확률은 서버가 소수 둘째 자리까지 반올림한 문자열이다. 화면에서는 소수점 뒤 불필요한 0만 생략한다. 확률은 보드 조작 전 최초 추첨 기준이다.
+
+`effects:[{itemId,stacks}]`는 가중치/심벌 배당 외의 활성 효과다. 스핀 전체 배수·확률 발동은 고정 심벌 배당에 미리 곱하지 않는다. 할인은 구매 즉시 current에 표시한다. 카탈로그의 `upgrades`는 해당 규칙의 기본 표이고 아이템 `summary`는 JSON에서 만든 짧은 설명이다. 과거 중복 요청도 당시 상태와 고정 규칙으로 계산한다. 이 정보는 RNG를 소비하지 않고 게임 입력으로 받지 않는다.
+
 ```json
 {
   "runId":"run_123",
@@ -93,7 +105,7 @@ interface RunView {
   "revision":3
 }
 ```
-**주의:** 위 JSON은 초기 기획의 평탄화된 가상 예시다. 실제 HTTP 액션 응답은 `{state,event}`이며 `event.board`, `event.spinScore`, `state.roundScore` 등으로 구분한다. 완전한 재현 테스트 벡터는 `09-TEST_CASES.md`를 사용한다.
+**주의:** 위 JSON은 초기 기획의 평탄화된 가상 예시다. 실제 HTTP 액션 응답은 `{state,event,upgrades}`이며 `event.board`, `event.spinScore`, `state.roundScore` 등으로 구분한다. 완전한 재현 테스트 벡터는 `09-TEST_CASES.md`를 사용한다.
 
 ## 7.3 실패/동시성
 - 에러 예: `INVALID_COMMAND`, `INVALID_RUN_PHASE`, `NO_HANDS_LEFT`, `TARGET_NOT_MET`, `INSUFFICIENT_COINS`, `ITEM_CAP_REACHED`, `INVENTORY_FULL`, `SOLD_OUT`, `UNKNOWN_SHOP_SLOT`, `UNKNOWN_ITEM_INSTANCE`, `COIN_OVERFLOW`, `STALE_REVISION`, `NOT_OWNER`, `IDEMPOTENCY_CONFLICT`.

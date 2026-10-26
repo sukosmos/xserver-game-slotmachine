@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101a1b">
+  <meta name="description" content="NINE TO RUIN 슬롯 로그라이트">
+  <title>NINE TO RUIN</title>
+  <link rel="icon" href="/icons.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">게임으로 건너뛰기</a>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Nine to Ruin 홈"><span class="brand-mark">9<span>↗</span></span><span>NINE <em>TO</em> RUIN</span></a>
+    <nav aria-label="주 메뉴"><button data-tab="play" class="nav-active">플레이</button><button data-tab="catalog">아이템 도감</button><button data-tab="ranking">랭킹</button></nav>
+    <button class="settings-button" data-action="settings" aria-label="설정">설정 <span>☷</span></button>
+  </header>
+  <div id="notice" role="status" aria-live="polite"></div>
+  <main id="main" tabindex="-1"><div class="boot"><p>불러오는 중</p></div></main>
+  <footer><span>NINE TO RUIN <span class="dot">·</span> SLOT ROGUELITE</span><span id="connection">연결 중</span></footer>
+  <dialog id="details"><div id="detail-content"></div><form method="dialog"><button class="secondary">닫기</button></form></dialog>
+  <dialog id="settings"><div class="dialog-heading"><h2>설정</h2></div><label class="setting"><span>효과음</span><input id="sound" type="checkbox"></label><label class="setting"><span>빠른 연출</span><input id="fast" type="checkbox"></label><label class="setting"><span>모션 줄이기</span><input id="reduced" type="checkbox"></label><form method="dialog"><button class="primary">설정 닫기</button></form></dialog>
+  <dialog id="login"><h2>연결</h2><form id="login-form"><label for="play-key">플레이 키</label><input id="play-key" type="password" autocomplete="off" required placeholder="발급받은 플레이 키"><p id="login-error" role="alert"></p><button class="primary" type="submit">연결</button></form></dialog>
+  <noscript>게임을 플레이하려면 브라우저의 JavaScript를 켜주세요.</noscript>
+</body>
+</html>

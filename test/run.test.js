@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRun, applyAction, canClaim } from '../src/domain/run.js';
 import { parseRules } from '../src/domain/rules.js';
-import { rules, rawRules, cherryBoard, noLineBoard, randomForBoard } from './helpers.js';
+import { legacyRules as rules, rawLegacyRules as rawRules, cherryBoard, noLineBoard, randomForBoard } from './helpers.js';
 
 const start = (config = rules) => createRun(config);
 const takeSpin = (state, board = noLineBoard, config = rules) => applyAction(state, { type: 'SPIN' }, config, randomForBoard(board, config, Array(6).fill(0)));

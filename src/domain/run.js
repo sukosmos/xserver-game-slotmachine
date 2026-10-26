@@ -75,7 +75,7 @@ export function applyAction(previous, action, rules, rng) {
     state.roundScore += result.spinScore;
     state.runTotalScore += result.spinScore;
     let settlement = null;
-    if (state.handsRemaining === 0) {
+    if (state.handsRemaining === 0 || (rules.balance.round.autoClearOnTarget && state.roundScore >= state.targetScore)) {
       if (state.roundScore >= state.targetScore) {
         const cleared = completeRound(state, rules, rng);
         settlement = cleared.settlement;

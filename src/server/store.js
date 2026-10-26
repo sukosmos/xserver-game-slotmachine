@@ -6,6 +6,8 @@ import { parseRules } from '../domain/rules.js';
 import { compareRecords } from '../domain/ranking.js';
 import { GameSession, restoreSession, rulesFingerprint } from './session.js';
 import { createVault } from './vault.js';
+import { publicCatalog } from './catalog.js';
+import { upgradeView } from './upgrades.js';
 
 const terminal = (state) => ['RUN_FAILED', 'RUN_WON'].includes(state.phase);
 const hashToken = (token) => createHash('sha256').update(token).digest('hex');
@@ -105,14 +107,18 @@ export class GameStore {
     const audit = this.#vault.open(row.audit, context(row));
     requireCondition(audit.runId === row.id && audit.userId === userId && audit.rulesFingerprint === row.rules_hash, 'STORAGE_CORRUPT');
     const session = restoreSession(rules, audit);
-    return { row, audit, session };
+    return { row, audit, session, rules };
   }
 
   createRun(userId, idempotencyKey) {
     owner(userId); keyValid(idempotencyKey);
     return this.#transaction(() => {
       const cached = this.#db.prepare('SELECT response FROM creations WHERE owner_id = ? AND request_key = ?').get(userId, idempotencyKey);
-      if (cached) return JSON.parse(cached.response);
+      if (cached) {
+        const response = JSON.parse(cached.response);
+        const { rules } = this.#load(userId, response.state.runId);
+        return { ...response, upgrades: upgradeView(response.state, rules) };
+      }
       const session = new GameSession(this.#rules, { userId });
       const response = { state: session.getState(userId) };
       const time = this.#time();
@@ -120,17 +126,23 @@ export class GameStore {
       const encrypted = this.#vault.seal(session.exportAudit(), context(row));
       this.#db.prepare('INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, NULL)').run(row.id, userId, row.rules_hash, encrypted, time, time);
       this.#db.prepare('INSERT INTO creations VALUES (?, ?, ?, ?)').run(userId, idempotencyKey, row.id, JSON.stringify(response));
-      return response;
+      return { ...response, upgrades: upgradeView(response.state, this.#rules) };
     });
   }
 
   getRun(userId, runId) {
-    const { row, audit, session } = this.#load(userId, runId);
+    const { row, audit, session, rules } = this.#load(userId, runId);
+    const state = session.getState(userId);
     return {
-      state: session.getState(userId), lastEvent: audit.actions.at(-1)?.response.event ?? null,
+      state, upgrades: upgradeView(state, rules), lastEvent: audit.actions.at(-1)?.response.event ?? null,
       lastSpin: audit.actions.findLast((action) => action.command.type === 'SPIN')?.response.event ?? null,
       createdAt: row.created_at, updatedAt: row.updated_at, endedAt: row.ended_at,
     };
+  }
+
+  catalog(userId, runId) {
+    owner(userId);
+    return publicCatalog(runId ? this.#load(userId, runId).rules : this.#rules);
   }
 
   listRuns(userId, limit = 20) {
@@ -145,16 +157,17 @@ export class GameStore {
 
   execute(userId, runId, command) {
     return this.#transaction(() => {
-      const { row, session, audit } = this.#load(userId, runId);
+      const { row, session, audit, rules } = this.#load(userId, runId);
       const response = session.execute(userId, command);
+      const projected = { ...response, upgrades: upgradeView(response.state, rules) };
       const next = session.exportAudit();
-      if (next.finalState.revision === audit.finalState.revision) return response;
+      if (next.finalState.revision === audit.finalState.revision) return projected;
       const time = this.#time(row.updated_at);
       const endedAt = terminal(next.finalState) ? time : null;
       this.#db.prepare('UPDATE runs SET audit = ?, updated_at = ?, ended_at = ? WHERE id = ?')
         .run(this.#vault.seal(next, context(row)), time, endedAt, runId);
       if (endedAt !== null) this.#recordBest(userId, next.finalState, endedAt);
-      return response;
+      return projected;
     });
   }
 

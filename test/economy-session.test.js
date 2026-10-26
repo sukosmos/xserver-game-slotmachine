@@ -4,7 +4,7 @@ import { GameSession, replayAudit, rulesFingerprint } from '../src/server/sessio
 import { parseRules } from '../src/domain/rules.js';
 import { createRun, applyAction } from '../src/domain/run.js';
 import { createShop, rerollShop } from '../src/domain/shop.js';
-import { rawRules, seed, cherryBoard, randomForBoard } from './helpers.js';
+import { rawLegacyRules as rawRules, seed, cherryBoard, randomForBoard } from './helpers.js';
 
 const owner = 'owner';
 function fixture({ coins = 20, initialItemIds = [], itemIds = null, edit = () => {} } = {}) {

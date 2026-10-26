@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { GameError, requireCondition } from '../domain/errors.js';
+import { serveStatic } from './static.js';
 
 const base = '/api/game/v1';
 const routes = new Map([
@@ -48,7 +49,7 @@ function listLimit(url) {
 }
 
 /** authenticate is replaceable by an existing service's token verifier. Never read owner IDs from request data. */
-export function createGameServer({ store, authenticate = (token) => store.authenticate(token), rateLimit = 120, windowMs = 60000, now = Date.now }) {
+export function createGameServer({ store, authenticate = (token) => store.authenticate(token), localPlayer = null, rateLimit = 120, windowMs = 60000, now = Date.now }) {
   requireCondition(Number.isSafeInteger(rateLimit) && rateLimit > 0 && Number.isSafeInteger(windowMs) && windowMs > 0, 'INVALID_RATE_LIMIT');
   const buckets = new Map();
   function throttle(key, maximum) {
@@ -70,16 +71,36 @@ export function createGameServer({ store, authenticate = (token) => store.authen
     };
     try {
       const url = new URL(req.url, 'http://local');
+      if (url.search === '' && serveStatic(req, res, url.pathname)) return;
       if (req.method === 'GET' && url.pathname === '/health') { send(200, { status: 'ok' }); return; }
       throttle(`ip:${req.socket.remoteAddress}`, rateLimit * 4);
+      const host = req.headers.host ?? '';
+      const localHost = /^(127\.0\.0\.1|localhost|\[::1\])(?::\d+)?$/.test(host);
+      const loopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
+      const localEnabled = Boolean(localPlayer && localHost && loopback);
+      const sameOrigin = req.headers.origin === `http://${host}` || req.headers.origin === `https://${host}`;
+      const cookie = /(?:^|;\s*)nine_session=([A-Za-z0-9_-]{43})(?:;|$)/.exec(req.headers.cookie ?? '')?.[1];
+      if (req.method === 'GET' && url.pathname === `${base}/bootstrap` && url.search === '') { send(200, { localPlay: localEnabled }); return; }
+      if (req.method === 'POST' && url.pathname === `${base}/local-session` && url.search === '') {
+        requireCondition(localEnabled, 'NOT_FOUND');
+        requireCondition(sameOrigin, 'UNTRUSTED_ORIGIN');
+        const body = await readBody(req);
+        requireCondition(Object.keys(body).length === 0, 'INVALID_COMMAND');
+        const token = cookie && store.authenticate(cookie) === localPlayer ? cookie : store.issueToken(localPlayer);
+        res.setHeader('Set-Cookie', `nine_session=${token}; HttpOnly; SameSite=Strict; Path=/api/game/v1; Max-Age=604800`);
+        send(200, { playerId: store.playerId(localPlayer) }); return;
+      }
       const match = /^Bearer ([A-Za-z0-9_-]+)$/.exec(req.headers.authorization ?? '');
-      const userId = match ? await authenticate(match[1]) : null;
+      const localCookie = localEnabled ? cookie : null;
+      if (!match && localCookie && req.method !== 'GET') requireCondition(sameOrigin, 'UNTRUSTED_ORIGIN');
+      const userId = match ? await authenticate(match[1]) : localCookie ? store.authenticate(localCookie) : null;
       requireCondition(typeof userId === 'string' && userId.length > 0, 'UNAUTHENTICATED');
       throttle(`user:${userId}`, rateLimit);
       if (req.method === 'GET' && url.pathname === `${base}/runs`) { send(200, store.listRuns(userId, listLimit(url))); return; }
       if (req.method === 'GET' && url.pathname === `${base}/leaderboard`) { send(200, store.leaderboard(listLimit(url))); return; }
       requireCondition(url.search === '', 'INVALID_QUERY');
       if (req.method === 'GET' && url.pathname === `${base}/me`) { send(200, { playerId: store.playerId(userId) }); return; }
+      if (req.method === 'GET' && url.pathname === `${base}/catalog`) { send(200, store.catalog(userId)); return; }
       if (req.method === 'POST' && url.pathname === `${base}/runs`) {
         const body = await readBody(req);
         requireCondition(Object.keys(body).length === 0, 'INVALID_COMMAND');
@@ -89,6 +110,7 @@ export function createGameServer({ store, authenticate = (token) => store.authen
       requireCondition(resource !== null, 'NOT_FOUND');
       const [, runId, suffix] = resource;
       if (req.method === 'GET' && !suffix) { send(200, store.getRun(userId, runId)); return; }
+      if (req.method === 'GET' && suffix === 'catalog') { send(200, store.catalog(userId, runId)); return; }
       requireCondition(req.method === 'POST' && routes.has(suffix), 'NOT_FOUND');
       const body = await readBody(req);
       const type = routes.get(suffix);
@@ -99,6 +121,7 @@ export function createGameServer({ store, authenticate = (token) => store.authen
       const code = error instanceof GameError ? error.code : 'INTERNAL_ERROR';
       let status = badRequest.has(code) ? 400 : conflicts.has(code) ? 409 : 500;
       if (code === 'UNAUTHENTICATED') { status = 401; res.setHeader('WWW-Authenticate', 'Bearer'); }
+      if (code === 'UNTRUSTED_ORIGIN') status = 403;
       if (['RUN_NOT_FOUND', 'NOT_FOUND'].includes(code)) status = 404;
       if (code === 'RATE_LIMITED') { status = 429; res.setHeader('Retry-After', Math.ceil(windowMs / 1000)); }
       if (code === 'BODY_TOO_LARGE') status = 413;

@@ -8,7 +8,7 @@
 
 규칙 로딩 후 데이터는 읽기 전용이다. 심벌 가중치는 양의 안전 정수이고 합계는 100으로 고정하지 않는다(RNG v1의 합계 범위는 2^32 이하). 점수 필드는 작은 안전 정수 또는 십진 문자열을 받으며 런타임에는 BigInt를 쓴다. 라운드 목표는 십진 문자열만 허용한다. 규칙/라인/카탈로그 버전은 현재 함께 일치해야 하며 리플레이는 데이터 지문도 확인한다.
 
-현재 버전은 **v0.6**다. `balance.itemRules.boardModifierPriority`가 조작 그룹 순서를 지정한다. 최고점 후보 동률은 `bestCandidateTieBreak`, 후보별 가상 배당 난수 공유는 `bestCandidateVirtualRolls`, 라운드 간 연속 당첨 유지는 `consecutiveWinsCarryAcrossRounds`로 명시한다. 현재 엔진이 지원하지 않는 정책 값은 로더에서 거절한다.
+현재 버전은 **v0.7**다. `economy.startingCoins=2`, `round.autoClearOnTarget=true`로 시작 코인과 자동 정산을 지정한다. `balance.itemRules.boardModifierPriority`가 조작 그룹 순서를 지정한다. 최고점 후보 동률은 `bestCandidateTieBreak`, 후보별 가상 배당 난수 공유는 `bestCandidateVirtualRolls`, 라운드 간 연속 당첨 유지는 `consecutiveWinsCarryAcrossRounds`로 명시한다. 현재 엔진이 지원하지 않는 정책 값은 로더에서 거절한다.
 
 `balance.shop`의 `offerSelection`, `excludeFullInventoryItems`, `allowPreviousOfferItems`, `emptySlotsOnPoolExhaustion`, `vipActivation`은 등급별 추첨·진열·VIP 활성 시점을 명시한다. 가격/가중치/보상은 v0.5와 동일하다. 등급 추첨 구간 순서는 common→rare→epic→legendary이며 JSON 키 순서에 영향받지 않는다. 경제 아이템은 영구 슬롯만 허용하고 실패 보상은 0만 지원한다.
 

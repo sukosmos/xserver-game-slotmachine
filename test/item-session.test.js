@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { GameSession, replayAudit } from '../src/server/session.js';
 import { createRun, applyAction } from '../src/domain/run.js';
 import { acquireItem } from '../src/domain/inventory.js';
-import { rules, rawRules, seed, cherryBoard, noLineBoard, randomForBoard } from './helpers.js';
+import { legacyRules as rules, rawLegacyRules as rawRules, seed, cherryBoard, noLineBoard, randomForBoard } from './helpers.js';
 import { parseRules } from '../src/domain/rules.js';
 
 test('timed item expires once per accepted spin; duplicate requests do not consume charges or RNG', () => {

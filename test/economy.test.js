@@ -5,7 +5,7 @@ import { createShop, buyItem, rerollShop, discardShopItem, getShopView } from '.
 import { createRun, applyAction } from '../src/domain/run.js';
 import { acquireItem } from '../src/domain/inventory.js';
 import { parseRules } from '../src/domain/rules.js';
-import { rules, rawRules, cherryBoard, noLineBoard, scriptedRandom, randomForBoard } from './helpers.js';
+import { legacyRules as rules, rawLegacyRules as rawRules, cherryBoard, noLineBoard, scriptedRandom, randomForBoard } from './helpers.js';
 
 const zeros = () => ({ nextInt: () => 0 });
 const withItems = (ids = []) => createRun(rules, { initialItemIds: ids });

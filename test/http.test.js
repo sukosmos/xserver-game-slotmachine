@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
+import { request } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -8,7 +9,8 @@ import { tmpdir } from 'node:os';
 import { GameStore } from '../src/server/store.js';
 import { createGameServer } from '../src/server/http.js';
 import { parseRules } from '../src/domain/rules.js';
-import { rawRules } from './helpers.js';
+import { rawLegacyRules as rawRules } from './helpers.js';
+import { rawRules as currentRawRules } from './helpers.js';
 
 async function setup(t, serverOptions = {}, mutate = () => {}) {
   const dir = mkdtempSync(join(tmpdir(), 'nine-http-'));
@@ -29,8 +31,89 @@ async function setup(t, serverOptions = {}, mutate = () => {}) {
     });
     return { status: response.status, headers: response.headers, data: await response.json() };
   }
-  return { store, token, otherToken, server, call };
+  return { store, token, otherToken, server, call, url };
 }
+
+test('current HTTP rules start with two coins and settle the successful spin atomically', async (t) => {
+  const { call } = await setup(t, {}, (raw) => {
+    Object.assign(raw, currentRawRules());
+    raw.balance.round.roundTargets[0].targetScore = '1';
+    raw.catalog.items = raw.catalog.items.filter((item) => ['cherry_farm', 'golden_harvest', 'joker_mask'].includes(item.id));
+  });
+  const created = (await call('/runs', { body: {}, key: 'auto-create' })).data;
+  assert.equal(created.state.coins, 2);
+  const id = created.state.runId;
+  const first = await call(`/runs/${id}/spins`, { body: { expectedRevision: 0 }, key: 'auto-spin' });
+  assert.equal(first.status, 200); assert.equal(first.data.state.phase, 'SHOP');
+  assert.equal(first.data.state.coins, 8); assert.equal(first.data.event.settlement.handBonus, 4);
+  assert.equal(first.data.state.revision, 1); assert.equal(first.data.state.canClaim, false);
+  assert.deepEqual((await call(`/runs/${id}/spins`, { body: { expectedRevision: 0 }, key: 'auto-spin' })).data, first.data);
+  for (const route of ['spins', 'claim']) {
+    assert.equal((await call(`/runs/${id}/${route}`, { body: { expectedRevision: 1 }, key: `invalid-${route}` })).status, 409);
+  }
+  const farm = first.data.state.shop.slots.find((slot) => slot.itemId === 'cherry_farm');
+  const bought = (await call(`/runs/${id}/shop/purchases`, { body: { expectedRevision: 1, slotId: farm.slotId }, key: 'buy' })).data;
+  assert.equal(bought.state.coins, 6);
+  const rerolled = (await call(`/runs/${id}/shop/rerolls`, { body: { expectedRevision: 2 }, key: 'reroll' })).data;
+  assert.equal(rerolled.state.coins, 5);
+  const next = (await call(`/runs/${id}/shop/continue`, { body: { expectedRevision: 3 }, key: 'next' })).data;
+  assert.equal(next.state.coins, 5); assert.equal(next.state.roundIndex, 2); assert.equal(next.state.handsRemaining, 5);
+  assert.equal(next.upgrades.current.symbols[0].weight, 40);
+  assert.deepEqual((await call('/runs', { body: {}, key: 'auto-create' })).data, created);
+});
+
+test('static allowlist serves the game with CSP and never serves source or private files', async (t) => {
+  const { url, call, token } = await setup(t);
+  for (const path of ['/', '/app.js', '/client.js', '/format.js', '/styles.css', '/icons.svg']) {
+    const result = await fetch(url + path);
+    assert.equal(result.status, 200); assert.match(result.headers.get('content-security-policy'), /script-src 'self'/);
+    assert.ok((await result.text()).length > 100);
+  }
+  for (const path of ['/.runtime/master.key', '/src/server/store.js', '/package.json', '/data/balance.json']) {
+    assert.notEqual((await fetch(url + path)).status, 200);
+  }
+  assert.equal((await call('/bootstrap', { auth: null })).data.localPlay, false);
+  assert.equal((await call('/me', { auth: null, headers: { Cookie: `nine_session=${token}` } })).status, 401);
+  assert.equal((await call('/local-session', { auth: null, body: {}, headers: { Origin: url } })).status, 404);
+});
+
+test('local play cookie is opt-in, loopback-only, HttpOnly and protected against cross-origin mutations', async (t) => {
+  const { call, url } = await setup(t, { localPlayer: 'local-player' });
+  assert.equal((await call('/bootstrap', { auth: null })).data.localPlay, true);
+  const forgedHost = await new Promise((resolve, reject) => {
+    const req = request(url + '/api/game/v1/bootstrap', { headers: { Host: 'evil.example' } }, (res) => {
+      let body = ''; res.setEncoding('utf8'); res.on('data', (part) => { body += part; }); res.on('end', () => resolve(JSON.parse(body)));
+    });
+    req.on('error', reject); req.end();
+  });
+  assert.equal(forgedHost.localPlay, false);
+  assert.equal((await call('/local-session', { auth: null, body: {} })).status, 403);
+  assert.equal((await call('/local-session', { auth: null, body: {}, headers: { Origin: 'https://evil.example' } })).status, 403);
+  assert.equal((await call('/local-session', { auth: null, body: { userId: 'alice' }, headers: { Origin: url } })).status, 400);
+  const session = await call('/local-session', { auth: null, body: {}, headers: { Origin: url } });
+  assert.equal(session.status, 200);
+  const setCookie = session.headers.get('set-cookie'); assert.match(setCookie, /HttpOnly; SameSite=Strict/);
+  const Cookie = setCookie.split(';')[0];
+  assert.equal((await call('/me', { auth: null, headers: { Cookie } })).data.playerId, session.data.playerId);
+  assert.equal((await call('/runs', { auth: null, body: {}, key: 'csrf', headers: { Cookie, Origin: 'https://evil.example' } })).status, 403);
+  assert.equal((await call('/runs', { auth: null, body: {}, key: 'csrf', headers: { Cookie } })).status, 403);
+  const created = await call('/runs', { auth: null, body: {}, key: 'local', headers: { Cookie, Origin: url } });
+  assert.equal(created.status, 201);
+  const reused = await call('/local-session', { auth: null, body: {}, headers: { Cookie, Origin: url } });
+  assert.equal(reused.headers.get('set-cookie'), setCookie);
+});
+
+test('catalog is JSON-derived and run catalogs enforce ownership', async (t) => {
+  const { call, otherToken } = await setup(t);
+  const catalog = (await call('/catalog')).data;
+  assert.equal(catalog.items.length, 27); assert.equal(catalog.lines.length, 8);
+  assert.ok(catalog.items.every((item) => item.description.length > 10));
+  assert.ok(catalog.targets.every((target) => typeof target === 'string'));
+  assert.ok(!JSON.stringify(catalog).includes('initialSeed'));
+  const id = (await call('/runs', { body: {}, key: 'catalog' })).data.state.runId;
+  assert.deepEqual((await call(`/runs/${id}/catalog`)).data, catalog);
+  assert.equal((await call(`/runs/${id}/catalog`, { auth: otherToken })).status, 404);
+});
 
 test('HTTP authentication, ownership, state recovery and create/spin idempotency', async (t) => {
   const { call, otherToken, store, token } = await setup(t);
@@ -118,4 +201,36 @@ test('rate limits reject extra requests and recover after the window', async (t)
   assert.equal(blocked.headers.get('retry-after'), '1');
   time += 1000;
   assert.equal((await call('/me')).status, 200);
+});
+
+test('upgrade responses track purchase preview, activation, discard and original idempotent state', async (t) => {
+  const { call } = await setup(t, {}, (raw) => {
+    raw.balance.round.roundTargets.forEach((target) => { target.targetScore = '1'; });
+    raw.balance.economy.startingCoins = 50;
+    raw.catalog.items = raw.catalog.items.filter((item) => item.id === 'golden_harvest');
+  });
+  let result = (await call('/runs', { body: {}, key: 'upgrade-create' })).data;
+  const id = result.state.runId;
+  const act = async (suffix, extra = {}) => {
+    const res = await call(`/runs/${id}/${suffix}`, { body: { expectedRevision: result.state.revision, ...extra }, key: `upgrade-${result.state.revision}` });
+    assert.equal(res.status, 200); result = res.data;
+    assert.equal(result.upgrades.revision, result.state.revision);
+  };
+  await act('spins'); await act('claim');
+  await act('shop/purchases', { slotId: result.state.shop.slots[0].slotId });
+  const purchase = structuredClone(result);
+  assert.equal(result.upgrades.current.symbols[0].linePayout, '30');
+  assert.equal(result.upgrades.next.symbols[0].linePayout, '90');
+  assert.deepEqual((await call(`/runs/${id}`)).data.upgrades, result.upgrades);
+  await act('shop/continue');
+  assert.equal(result.upgrades.current.symbols[0].linePayout, '90');
+  assert.equal(result.upgrades.next, null);
+  await act('spins'); await act('claim');
+  await act('shop/discards', { instanceId: result.state.items[0].instanceId });
+  assert.equal(result.upgrades.current.symbols[0].linePayout, '30');
+  assert.equal(result.upgrades.next.symbols[0].linePayout, '30');
+  const repeated = await call(`/runs/${id}/shop/purchases`, { body: { expectedRevision: 2, slotId: 'round-1-offer-0-slot-0' }, key: 'upgrade-2' });
+  assert.deepEqual(repeated.data, purchase);
+  const creation = (await call('/runs', { body: {}, key: 'upgrade-create' })).data;
+  assert.equal(creation.upgrades.revision, 0); assert.equal(creation.upgrades.current.symbols[0].linePayout, '30');
 });

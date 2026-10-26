@@ -10,7 +10,8 @@ import { GameStore } from '../src/server/store.js';
 import { createVault } from '../src/server/vault.js';
 import { compareRecords } from '../src/domain/ranking.js';
 import { parseRules } from '../src/domain/rules.js';
-import { rules, rawRules } from './helpers.js';
+import { legacyRules as rules, rawLegacyRules as rawRules } from './helpers.js';
+import { rules as currentRules } from './helpers.js';
 
 function fixture(t, config = rules) {
   const dir = mkdtempSync(join(tmpdir(), 'nine-store-'));
@@ -25,6 +26,20 @@ function losingRules() {
   const raw = rawRules(); raw.balance.round.roundTargets[0].targetScore = '9999999999999999999999999999';
   return parseRules(raw);
 }
+
+test('v0.6 stored runs still replay while new deployments use two coins and auto clear', (t) => {
+  const raw = rawRules(); raw.balance.round.roundTargets[0].targetScore = '1';
+  const { store, open } = fixture(t, parseRules(raw));
+  const id = store.createRun('alice', 'legacy').state.runId;
+  const previous = store.execute('alice', id, cmd('SPIN', 0));
+  assert.equal(previous.state.canClaim, true); assert.equal(previous.state.coins, 0);
+  store.close();
+  const upgraded = open({ rules: currentRules });
+  assert.deepEqual(upgraded.execute('alice', id, cmd('SPIN', 0)), previous);
+  assert.equal(upgraded.getRun('alice', id).state.canClaim, true);
+  assert.equal(upgraded.execute('alice', id, cmd('CLAIM', 1)).state.coins, 5);
+  assert.equal(upgraded.createRun('alice', 'current').state.coins, 2);
+});
 
 test('disk restart restores state, RNG, idempotent responses and server-issued authentication', (t) => {
   const { store, open, options } = fixture(t);
@@ -74,6 +89,11 @@ test('existing runs keep stored rules after new deployments, including overlarge
   const oldSpin = changed.execute('alice', id, cmd('SPIN', 0));
   assert.equal(oldSpin.event.baseScore, '81064793292668937');
   assert.equal(oldSpin.state.rulesVersion, config.rulesVersion);
+  assert.equal(changed.catalog('alice', id).symbols[0].basePoint, '9007199254740993');
+  assert.equal(changed.catalog('alice', id).rulesVersion, config.rulesVersion);
+  assert.equal(changed.catalog('alice').rulesVersion, 'new-test');
+  assert.equal(changed.getRun('alice', id).upgrades.current.symbols[0].point, '9007199254740993');
+  assert.equal(changed.createRun('alice', 'old').upgrades.current.symbols[0].point, '9007199254740993');
   assert.equal(changed.createRun('alice', 'new').state.rulesVersion, 'new-test');
 });
 

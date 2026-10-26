@@ -1,6 +1,19 @@
 import { loadRules } from '../src/server/load-rules.js';
+import { parseRules } from '../src/domain/rules.js';
 
 export const rules = loadRules();
+// Keep explicit v0.6 fixtures for stored manual-settlement replay regressions.
+export function rawLegacyRules() {
+  const raw = rawRules();
+  for (const part of Object.values(raw)) part.version = 'v0.6';
+  delete raw.balance.round.autoClearOnTarget;
+  raw.balance.round.baseHands = 4;
+  raw.balance.round.roundTargets = [120,250,550,1200,3000,7500,18000,45000,120000,300000]
+    .map((target, index) => ({ round: index + 1, targetScore: String(target) }));
+  raw.balance.economy.startingCoins = 0;
+  return raw;
+}
+export const legacyRules = parseRules(rawLegacyRules());
 export const seed = '0123456789abcdef'.repeat(4);
 export const cherryBoard = Array(9).fill('cherry');
 export const sevenBoard = Array(9).fill('seven');
