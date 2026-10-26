@@ -1,0 +1,616 @@
+{
+  "version": "v0.6-selected8",
+  "assumptions": {
+    "symbolBasePoints": {
+      "cherry": 1,
+      "lemon": 2,
+      "bell": 3,
+      "diamond": 5,
+      "seven": 10
+    },
+    "linePayouts": {
+      "cherry": 30,
+      "lemon": 60,
+      "bell": 120,
+      "diamond": 300,
+      "seven": 1500
+    },
+    "baseHandLimit": 4,
+    "noUnlistedItems": true,
+    "globalMultiplier": {
+      "num": 1,
+      "den": 1
+    },
+    "rngRollSpace": "integer_0_through_9999_inclusive",
+    "rngPassRule": "roll < triggerChanceBasisPoints",
+    "boardsProvidedAsServerDrawOverridesForUnitTests": true
+  },
+  "testCases": [
+    {
+      "id": "S8-01",
+      "title": "No seven schedules exactly one next-Hand weight bonus",
+      "activeItems": [
+        "seven_tracker"
+      ],
+      "given": {
+        "finalPhysicalBoard": [
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry"
+        ],
+        "currentHandSequence": 5
+      },
+      "when": "HAND_RESOLVED",
+      "expected": {
+        "pendingNextHandWeightBuffs": [
+          {
+            "sourceItemId": "seven_tracker",
+            "symbol": "seven",
+            "amount": 4,
+            "targetHandSequence": 6
+          }
+        ],
+        "nextHandWeightsNoOtherModifiers": [
+          30,
+          25,
+          20,
+          15,
+          14
+        ],
+        "nextHandSevenProbability": "14/104"
+      }
+    },
+    {
+      "id": "S8-02",
+      "title": "Mirror copies a full column and scores both real cherry lines",
+      "activeItems": [
+        "mirror_copier"
+      ],
+      "given": {
+        "drawnBoard": [
+          "cherry",
+          "bell",
+          "diamond",
+          "cherry",
+          "lemon",
+          "seven",
+          "cherry",
+          "diamond",
+          "bell"
+        ],
+        "remainingCharges": 2
+      },
+      "rngOverrides": {
+        "mirror_copier.activationRollBp": 999
+      },
+      "when": "SPIN",
+      "expected": {
+        "finalPhysicalBoard": [
+          "cherry",
+          "bell",
+          "cherry",
+          "cherry",
+          "lemon",
+          "cherry",
+          "cherry",
+          "diamond",
+          "cherry"
+        ],
+        "physicalChanged": true,
+        "actualWinningLineIds": [
+          "col_left",
+          "col_right"
+        ],
+        "baseScore": "16",
+        "actualLineScore": "60",
+        "patternBonus": "0",
+        "spinScore": "76",
+        "remainingCharges": 1
+      }
+    },
+    {
+      "id": "S8-03",
+      "title": "Editors proof doubles actual lines after mirror",
+      "activeItems": [
+        "mirror_copier",
+        "editors_proof"
+      ],
+      "given": {
+        "drawnBoard": [
+          "cherry",
+          "bell",
+          "diamond",
+          "cherry",
+          "lemon",
+          "seven",
+          "cherry",
+          "diamond",
+          "bell"
+        ],
+        "remainingCharges.mirror_copier": 2
+      },
+      "rngOverrides": {
+        "mirror_copier.activationRollBp": 999
+      },
+      "when": "SPIN",
+      "expected": {
+        "finalPhysicalBoard": [
+          "cherry",
+          "bell",
+          "cherry",
+          "cherry",
+          "lemon",
+          "cherry",
+          "cherry",
+          "diamond",
+          "cherry"
+        ],
+        "physicalChanged": true,
+        "baseScore": "16",
+        "actualLineScore": "120",
+        "spinScore": "136",
+        "remainingCharges.mirror_copier": 1
+      }
+    },
+    {
+      "id": "S8-04",
+      "title": "Wild creates cherry row but does not change physical symbols",
+      "activeItems": [
+        "temporary_wild"
+      ],
+      "given": {
+        "drawnBoard": [
+          "cherry",
+          "cherry",
+          "diamond",
+          "bell",
+          "lemon",
+          "seven",
+          "diamond",
+          "bell",
+          "lemon"
+        ],
+        "remainingCharges": 2
+      },
+      "rngOverrides": {
+        "temporary_wild.activationRollBp": 1199,
+        "temporary_wild.selectedCellIndex": 2
+      },
+      "when": "SPIN",
+      "expected": {
+        "finalPhysicalBoard": [
+          "cherry",
+          "cherry",
+          "diamond",
+          "bell",
+          "lemon",
+          "seven",
+          "diamond",
+          "bell",
+          "lemon"
+        ],
+        "wildMarks": [
+          2
+        ],
+        "physicalChanged": false,
+        "actualWinningLineIds": [
+          "row_top"
+        ],
+        "baseScore": "32",
+        "actualLineScore": "30",
+        "spinScore": "62",
+        "remainingCharges": 1
+      }
+    },
+    {
+      "id": "S8-05",
+      "title": "A permanent central wild plus temporary mark forms diagonal diamonds",
+      "activeItems": [
+        "joker_mask",
+        "temporary_wild"
+      ],
+      "given": {
+        "drawnBoard": [
+          "cherry",
+          "cherry",
+          "diamond",
+          "bell",
+          "lemon",
+          "seven",
+          "diamond",
+          "bell",
+          "lemon"
+        ],
+        "remainingCharges.temporary_wild": 2
+      },
+      "rngOverrides": {
+        "temporary_wild.activationRollBp": 0,
+        "temporary_wild.selectedCellIndex": 2
+      },
+      "when": "SPIN",
+      "expected": {
+        "wildMarks": [
+          2,
+          4
+        ],
+        "physicalChanged": false,
+        "actualWinningLineIds": [
+          "row_top",
+          "diag_anti"
+        ],
+        "baseScore": "32",
+        "actualLineScore": "330",
+        "spinScore": "362",
+        "remainingCharges.temporary_wild": 1
+      }
+    },
+    {
+      "id": "S8-06",
+      "title": "Corner bonus uses physical corners without any real payline",
+      "activeItems": [
+        "corner_collector"
+      ],
+      "given": {
+        "drawnBoard": [
+          "cherry",
+          "bell",
+          "cherry",
+          "lemon",
+          "seven",
+          "diamond",
+          "cherry",
+          "lemon",
+          "cherry"
+        ],
+        "stacks.corner_collector": 1
+      },
+      "when": "SPIN",
+      "expected": {
+        "baseScore": "26",
+        "actualLineScore": "0",
+        "patternBonus": "500",
+        "spinScore": "526",
+        "actualWinningLineIds": []
+      }
+    },
+    {
+      "id": "S8-07",
+      "title": "Two corner collector stacks add bonuses, not multiply",
+      "activeItems": [
+        "corner_collector"
+      ],
+      "given": {
+        "drawnBoard": [
+          "cherry",
+          "bell",
+          "cherry",
+          "lemon",
+          "seven",
+          "diamond",
+          "cherry",
+          "lemon",
+          "cherry"
+        ],
+        "stacks.corner_collector": 2
+      },
+      "when": "SPIN",
+      "expected": {
+        "baseScore": "26",
+        "actualLineScore": "0",
+        "patternBonus": "1000",
+        "spinScore": "1026"
+      }
+    },
+    {
+      "id": "S8-08",
+      "title": "Crossroads counts intersection cells once each",
+      "activeItems": [
+        "crossroads_bonus"
+      ],
+      "given": {
+        "drawnBoard": [
+          "lemon",
+          "cherry",
+          "bell",
+          "cherry",
+          "cherry",
+          "cherry",
+          "diamond",
+          "cherry",
+          "seven"
+        ]
+      },
+      "when": "SPIN",
+      "expected": {
+        "actualWinningLineIds": [
+          "row_middle",
+          "col_middle"
+        ],
+        "crossingCellIndices": [
+          4
+        ],
+        "baseScore": "25",
+        "actualLineScore": "60",
+        "patternBonus": "200",
+        "spinScore": "285"
+      }
+    },
+    {
+      "id": "S8-09",
+      "title": "Crossroads caps on all-cherry board",
+      "activeItems": [
+        "crossroads_bonus"
+      ],
+      "given": {
+        "drawnBoard": [
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry"
+        ]
+      },
+      "when": "SPIN",
+      "expected": {
+        "baseScore": "9",
+        "actualLineScore": "240",
+        "eligibleCrossingCellCount": 9,
+        "patternBonus": "600",
+        "spinScore": "849"
+      }
+    },
+    {
+      "id": "S8-10",
+      "title": "Seven tracker observes mirror result rather than initial draw",
+      "activeItems": [
+        "seven_tracker",
+        "mirror_copier"
+      ],
+      "given": {
+        "drawnBoard": [
+          "cherry",
+          "cherry",
+          "diamond",
+          "bell",
+          "lemon",
+          "seven",
+          "diamond",
+          "bell",
+          "lemon"
+        ],
+        "currentHandSequence": 8
+      },
+      "rngOverrides": {
+        "mirror_copier.activationRollBp": 0
+      },
+      "when": "SPIN",
+      "expected": {
+        "finalPhysicalBoard": [
+          "cherry",
+          "cherry",
+          "cherry",
+          "bell",
+          "lemon",
+          "bell",
+          "diamond",
+          "bell",
+          "diamond"
+        ],
+        "physicalChanged": true,
+        "pendingSevenBonusTargetHandSequence": 9
+      }
+    },
+    {
+      "id": "S8-11",
+      "title": "Receipt collector refunds on exactly third eligible purchase",
+      "activeItems": [
+        "receipt_collector"
+      ],
+      "given": {
+        "coins": 7,
+        "purchaseCounter": 0,
+        "itemPrices": [
+          2,
+          2,
+          2
+        ],
+        "shopEligible": true
+      },
+      "when": "THREE_SUCCESSFUL_ITEM_PURCHASES",
+      "expected": {
+        "coinsAfterEach": [
+          5,
+          3,
+          2
+        ],
+        "purchaseCounterAfterEach": [
+          1,
+          2,
+          0
+        ],
+        "refundCoinsTotal": 1
+      }
+    },
+    {
+      "id": "S8-12",
+      "title": "Emergency Hand grants once before failure",
+      "activeItems": [
+        "emergency_lever"
+      ],
+      "given": {
+        "handsRemaining": 0,
+        "roundScore": "40",
+        "targetScore": "120",
+        "remainingCharges": 1,
+        "phase": "ROUND_ACTIVE"
+      },
+      "when": "HAND_RESOLVED_BEFORE_FAILURE_CHECK",
+      "expected": {
+        "handsRemaining": 1,
+        "remainingCharges": 0,
+        "phase": "ROUND_ACTIVE",
+        "events": [
+          "EMERGENCY_HAND_GRANTED"
+        ],
+        "runFailed": false
+      }
+    },
+    {
+      "id": "S8-13",
+      "title": "Emergency Hand does not trigger when goal was reached",
+      "activeItems": [
+        "emergency_lever"
+      ],
+      "given": {
+        "handsRemaining": 0,
+        "roundScore": "120",
+        "targetScore": "120",
+        "remainingCharges": 1,
+        "phase": "ROUND_ACTIVE"
+      },
+      "when": "HAND_RESOLVED_BEFORE_FAILURE_CHECK",
+      "expected": {
+        "handsRemaining": 0,
+        "remainingCharges": 1,
+        "runFailed": false,
+        "nextTransition": "ROUND_AUTO_CLEARED"
+      }
+    },
+    {
+      "id": "S8-14",
+      "title": "Wild and mirror trigger editor and crossroads together",
+      "activeItems": [
+        "mirror_copier",
+        "temporary_wild",
+        "editors_proof",
+        "crossroads_bonus"
+      ],
+      "given": {
+        "drawnBoard": [
+          "cherry",
+          "bell",
+          "diamond",
+          "cherry",
+          "lemon",
+          "seven",
+          "cherry",
+          "diamond",
+          "bell"
+        ],
+        "remainingCharges.mirror_copier": 2,
+        "remainingCharges.temporary_wild": 2
+      },
+      "rngOverrides": {
+        "mirror_copier.activationRollBp": 0,
+        "temporary_wild.activationRollBp": 0,
+        "temporary_wild.selectedCellIndex": 1
+      },
+      "when": "SPIN",
+      "expected": {
+        "finalPhysicalBoard": [
+          "cherry",
+          "bell",
+          "cherry",
+          "cherry",
+          "lemon",
+          "cherry",
+          "cherry",
+          "diamond",
+          "cherry"
+        ],
+        "physicalChanged": true,
+        "wildMarks": [
+          1
+        ],
+        "actualWinningLineIds": [
+          "row_top",
+          "col_left",
+          "col_right"
+        ],
+        "crossingCellIndices": [
+          0,
+          2
+        ],
+        "baseScore": "16",
+        "actualLineScore": "180",
+        "patternBonus": "400",
+        "spinScore": "596",
+        "remainingCharges.mirror_copier": 1,
+        "remainingCharges.temporary_wild": 1
+      }
+    },
+    {
+      "id": "S8-15",
+      "title": "Editors proof with wild only does not trigger",
+      "activeItems": [
+        "temporary_wild",
+        "editors_proof"
+      ],
+      "given": {
+        "drawnBoard": [
+          "cherry",
+          "cherry",
+          "diamond",
+          "bell",
+          "lemon",
+          "seven",
+          "diamond",
+          "bell",
+          "lemon"
+        ]
+      },
+      "rngOverrides": {
+        "temporary_wild.activationRollBp": 0,
+        "temporary_wild.selectedCellIndex": 2
+      },
+      "when": "SPIN",
+      "expected": {
+        "physicalChanged": false,
+        "baseScore": "32",
+        "actualLineScore": "30",
+        "spinScore": "62"
+      }
+    },
+    {
+      "id": "S8-16",
+      "title": "Corner and crossroads bonus coexist but remain separate from line multiplier",
+      "activeItems": [
+        "corner_collector",
+        "crossroads_bonus",
+        "editors_proof"
+      ],
+      "given": {
+        "drawnBoard": [
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry",
+          "cherry"
+        ],
+        "stacks.corner_collector": 1
+      },
+      "when": "SPIN",
+      "expected": {
+        "physicalChanged": false,
+        "baseScore": "9",
+        "actualLineScore": "240",
+        "patternBonus": "1100",
+        "spinScore": "1349"
+      }
+    }
+  ]
+}

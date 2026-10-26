@@ -12,6 +12,14 @@ export async function presentSpin({ event, presentation, fast = false, reduced =
   const changed = event.rawBoard.some((id, i) => id !== event.board[i]);
   if (changed) { show('raw', { board: event.rawBoard }); await pause(reduced ? 120 : 280); }
   show('reveal', { board: event.board }); await pause(reduced ? 80 : 200);
+  const awards = presentation?.awards ?? [];
+  if (reduced && awards.length) {
+    show('awards', { board: event.board, awards }); await pause(160, 100);
+  } else {
+    for (const award of awards) {
+      show('award', { board: event.board, award }); await pause(140, 85);
+    }
+  }
   const effects = presentation?.effects ?? [];
   // Batches keep large builds readable without making each spin excessively long.
   for (let index = 0; index < effects.length; index += 3) {
@@ -20,6 +28,10 @@ export async function presentSpin({ event, presentation, fast = false, reduced =
   }
   show('score', { board: event.board });
   await fill(reduced ? 0 : fast ? 280 : 650);
+  if (presentation?.emergency) {
+    show('emergency', { board: event.board, handsGranted: presentation.emergency.handsGranted });
+    await pause(950, 650);
+  }
   if (event.settlement) {
     show('clear', { reward: event.settlement.reward, board: event.board });
     await pause(1050, 650);

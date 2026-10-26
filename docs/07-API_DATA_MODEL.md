@@ -1,5 +1,12 @@
 # 07. API 및 데이터 모델 계약 초안
 
+## v0.11 카드 선택 확장
+- R3 성공 시 정산 후 `CARD_CHOICE`, `shop:null`이 된다. `cardChoice.slots`에는 `{slotId}`3개만 포함하고 순서별 카드 효과·난수는 공개하지 않는다.
+- `POST /api/game/v1/runs/:id/cards/choice`: `{expectedRevision,slotId}`와 Idempotency-Key를 받는다. 내부 명령은 `CHOOSE_CARD`다. 카드 ID·삭제 심벌·수치는 클라이언트 입력으로 받지 않는다.
+- 선택 응답은 `CARD_SELECTED` 이벤트, 공개 `milestoneReward`, 갱신된 강화 표와 `SHOP` 상태다. 선택과 상점 생성은 한 트랜잭션이며 재전송/동시 선택을 보호한다.
+- `roundWildAvailable`은 해당 라운드 첫 Hand의 영구 조커 대기 여부다. 스핀 이벤트 `milestoneWild`와 `wildMarks`는 실제 적용을 표시한다. 과거 규칙 응답에는 신규 필드를 추가하지 않는다.
+- 기존 정산 후 즉시 SHOP 규칙은 카드 단계가 없는 라운드에 적용된다. 세부 계약은 [카드 보상](18-MILESTONE_CARDS.md)을 따른다.
+
 > 엔드포인트 이름은 **프레임워크 중립의 권장 설계**. 실제 서버에 기존 API 라우팅/인증 체계가 있다면 맞춘다.
 
 **현재 구현 범위:** Phase 4는 아래 REST 경로를 구현했다. `GameStore`가 저장과 복구를 담당하고 내부 `GameSession.execute(userId, command)`가 게임 명령을 검증한다. `userId`는 서버 인증 문맥에서만 전달한다. 액션 응답은 `{state, event, upgrades}`이며 점수는 십진 문자열, 코인·가격은 안전 정수다. 서버 전용 `initialItemIds`는 테스트 빌드 주입용이며 HTTP에서는 허용하지 않는다. `exportAudit()`의 `slot-audit-v3`에는 비밀 시드와 난수 추첨값이 있어 암호화해 저장하며 외부에 노출하지 않는다. 구버전 감사 포맷은 자동 이관하지 않는다.
@@ -12,11 +19,11 @@ type Command = { expectedRevision: number; idempotencyKey: string } & (
 );
 ```
 
-추가 필드는 `INVALID_COMMAND`로 거절한다. 구매 가격·itemId·할인·무료 리롤 여부는 서버가 계산한다. 정산은 보상 지급과 상품 생성을 한 번에 처리하므로 공개 상태에 `ROUND_CLEAR`는 없고 바로 `SHOP` 또는 최종 `RUN_WON`이 된다. 성공 이벤트의 `settlement`에는 `coinsBefore`, `baseReward`, `itemBaseBonus`, `handBonus`, `interest`, `interestCap`, `bonusCoins`, `reward`, `coinsAfterReward`, `triggeredItems`가 있다. 일반/실패 스핀은 `settlement: null`이다. 최종 승리에서는 지급 내역을 기록한 뒤 공개 상태의 코인과 아이템을 초기화한다.
+추가 필드는 `INVALID_COMMAND`로 거절한다. 구매 가격·itemId·할인·무료 리롤 여부는 서버가 계산한다. 정산은 보상 지급과 상품 생성을 한 번에 처리하므로 공개 상태에 `ROUND_CLEAR`는 없고 `SHOP` 또는 최종 `RUN_WON`이 된다. v0.11의 R3는 먼저 `CARD_CHOICE`로 이동하고 선택 후 상품을 생성한다. 성공 이벤트의 `settlement`에는 `coinsBefore`, `baseReward`, `itemBaseBonus`, `handBonus`, `interest`, `interestCap`, `bonusCoins`, `reward`, `coinsAfterReward`, `triggeredItems`가 있다. 일반/실패 스핀은 `settlement: null`이다. 최종 승리에서는 지급 내역을 기록한 뒤 공개 상태의 코인과 아이템을 초기화한다.
 
 ## 7.1 상태 모델(TypeScript 개념 인터페이스)
 ```ts
-type RunPhase = 'ROUND_ACTIVE' | 'SHOP' | 'RUN_FAILED' | 'RUN_WON';
+type RunPhase = 'ROUND_ACTIVE' | 'CARD_CHOICE' | 'SHOP' | 'RUN_FAILED' | 'RUN_WON';
 type ItemLifetime = 'permanent' | 'charged' | 'timed';
 interface ItemInstance {
   instanceId: string;
@@ -130,3 +137,15 @@ Phase 5 강화 표 추가: HTTP 생성은 `{state,upgrades}`, 액션은 `{state,
 - 강화 표의 각 snapshot은 현재/다음 라운드 총 `hands`도 제공한다.
 - SPIN 응답과 GET 런의 `presentation`은 `multiplier`, `effects:[{itemId,name,label,stage}]`, `expired:[{itemId,name}]`를 제공한다. stage는 draw/board/score/clear이며 실제 이벤트와 고정 규칙에서 서버가 계산한다. 스핀 외 액션은 null이다.
 - `presentation`은 `upgrades`처럼 감사 로그 밖의 표시용 투영이다. 중복 요청은 원래 이벤트 기준으로 재계산하며 클라이언트가 발동 여부/보상/배율을 제출하지 않는다.
+
+### v0.9 사각형 보너스와 순차 강조
+- 새 규칙의 스핀 이벤트는 `patternScore`(십진 문자열)와 `winningPatterns:[{patternId,indices,symbol,basePayout,score}]`를 포함한다. 배당 두 필드 역시 십진 문자열이다. 아이템이 없거나 일치하지 않으면 `"0"`, `[]`다. 기존 v0.6~v0.8 감사 이벤트에는 추가하지 않는다.
+- `presentation.awards:[{kind,id,label,indices,symbol,score}]`는 당첨 라인 다음 사각형 순서다. kind는 `line`/`square`, indices는 서버가 확정한 3개/4개 칸 좌표, score는 전체 배수 적용 전 해당 영역의 배당 문자열이다. 클라이언트는 이 순서와 좌표로 표시만 한다.
+- `upgrades.current/next.symbols[].point`에는 가중치 아이템의 `basePointAdd` 중첩도 반영한다. 모든 확률·배당·최종 점수는 서버에서 계산한다.
+
+### v0.10 선택8종
+- 1칸 점수 추가는 가중치에서 배당 증가 아이템5종으로 이동한다. 강화 표는 같은 서버 계산 함수로 반영한다.
+- 새 런 상태는 `handSequence`, `pendingNextHandWeightBuffs:[{sourceInstanceId,symbol,amount,targetHandSequence}]`를 제공한다. 영수증 인스턴스에는 `purchaseCounter`가 추가된다. 이전 규칙에는 필드가 추가되지 않는다.
+- 스핀 이벤트에 `physicalChanged`, `wildMarks`, `handSequence`, `consumedWeightBuffs`, `pendingNextHandWeightBuffs`, `emergency`가 추가된다. 비상 지급은 `{type:'EMERGENCY_HAND_GRANTED',instanceId,itemId,handsGranted}` 또는 null이며 같은 스핀 트랜잭션에 포함된다. 물리 보드는 기존 `rawBoard`/`board`를 유지한다.
+- 새 패턴은 `winningPatterns`에 kind `corners`/`crossing`으로 기록되고 합계 `patternScore`에 포함된다. 표시 `presentation.awards`는 line/square/corners/crossing을 지원하고, 효과 stage `next`는 다음 스핀 예약이다. 와일드·강조·배당은 서버 확정 결과다.
+- 구매 이벤트에는 `refundCoins`, `refunds:[{type:'RECEIPT_REFUNDED',instanceId,itemId,coins}]`가 포함된다. 구매와 환급/카운터/재고는 함께 커밋되고 동일 요청은 전체 원래 응답을 반환한다. 입력 API 필드는 추가하지 않는다.

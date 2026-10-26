@@ -7,6 +7,7 @@
   "engines": { "node": ">=22.13" },
   "scripts": {
     "play": "node scripts/server.js --local-play",
+    "play:shared": "node scripts/share-server.js",
     "start": "node scripts/server.js",
     "account:create": "node scripts/account.js create",
     "account:revoke": "node scripts/account.js revoke",

@@ -4,7 +4,8 @@ import { createRun, applyAction } from '../src/domain/run.js';
 import { parseRules } from '../src/domain/rules.js';
 import { GameSession, replayAudit } from '../src/server/session.js';
 import { GameStore } from '../src/server/store.js';
-import { rules, rawRules, cherryBoard, noLineBoard, randomForBoard, seed } from './helpers.js';
+import { rawV08Rules as rawRules, cherryBoard, noLineBoard, randomForBoard, seed } from './helpers.js';
+const rules = parseRules(rawRules());
 
 const spin = (state, board = cherryBoard, config = rules) => applyAction(state, { type: 'SPIN' }, config, randomForBoard(board, config, Array(8).fill(0)));
 test('v0.8: three starting coins, target clears on first spin and unused Hands pay immediately', () => {

@@ -1,5 +1,5 @@
 {
-  "version": "v0.8",
+  "version": "v0.11",
   "status": "prototype_values_not_final",
   "board": {
     "rows": 3,
@@ -54,49 +54,84 @@
       },
       {
         "round": 2,
-        "targetScore": "240"
+        "targetScore": "220"
       },
       {
         "round": 3,
-        "targetScore": "525"
+        "targetScore": "400"
       },
       {
         "round": 4,
-        "targetScore": "1140"
+        "targetScore": "750"
       },
       {
         "round": 5,
-        "targetScore": "2850"
+        "targetScore": "1400"
       },
       {
         "round": 6,
-        "targetScore": "7125"
+        "targetScore": "2600"
       },
       {
         "round": 7,
-        "targetScore": "17100"
+        "targetScore": "4800"
       },
       {
         "round": 8,
-        "targetScore": "42750"
+        "targetScore": "9000"
       },
       {
         "round": 9,
-        "targetScore": "114000"
+        "targetScore": "17000"
       },
       {
         "round": 10,
-        "targetScore": "285000"
+        "targetScore": "32000"
       }
     ],
     "carryRoundScore": false,
     "carryCoins": true,
     "carryItems": true,
-    "maxExtraHands": 2
+    "maxExtraHands": 2,
+    "milestoneCards": {
+      "afterRound": 3,
+      "cards": [
+        {
+          "id": "prune",
+          "nameKo": "심벌 삭제",
+          "effect": {
+            "kind": "remove_weighted_symbol",
+            "redistribution": "proportional"
+          }
+        },
+        {
+          "id": "evolve",
+          "nameKo": "전체 강화",
+          "effect": {
+            "kind": "grant_symbol_upgrades",
+            "itemIds": [
+              "golden_harvest",
+              "lemon_syrup",
+              "resonance_hammer",
+              "gem_appraiser",
+              "lucky_crown"
+            ]
+          }
+        },
+        {
+          "id": "wild",
+          "nameKo": "영구 조커",
+          "effect": {
+            "kind": "first_hand_wild_each_round",
+            "cellIndex": 4
+          }
+        }
+      ]
+    }
   },
   "economy": {
     "startingCoins": 3,
-    "baseClearReward": 2,
+    "baseClearReward": 3,
     "unusedHandReward": 1,
     "interestPerCoins": 5,
     "interestCap": 2,
@@ -104,7 +139,7 @@
     "clearRewardPerRound": 1
   },
   "shop": {
-    "slots": 3,
+    "slots": 4,
     "unlimitedPurchases": true,
     "firstPaidRerollPrice": 1,
     "rerollPriceIncreasePerPaidReroll": 1,
@@ -136,11 +171,13 @@
       "reroll_last_column",
       "best_candidate_edit",
       "random_candidate_edit",
-      "seven_transform"
+      "seven_transform",
+      "mirror_copier"
     ],
     "bestCandidateTieBreak": "line_definition_order",
     "bestCandidateVirtualRolls": "shared_lazy_per_spin",
-    "consecutiveWinsCarryAcrossRounds": true
+    "consecutiveWinsCarryAcrossRounds": true,
+    "selected8Items": true
   },
   "ranking": {
     "sortOrder": [

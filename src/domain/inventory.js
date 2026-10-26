@@ -1,5 +1,6 @@
 import { requireCondition } from './errors.js';
 import { getItem } from './rules.js';
+import { isItemEnabled } from './selected8-contract.js';
 
 const positiveInteger = (value) => Number.isSafeInteger(value) && value > 0;
 
@@ -22,14 +23,17 @@ export function validateItems(items, rules) {
   for (const instance of items) {
     requireCondition(instance !== null && typeof instance === 'object' && !Array.isArray(instance), 'INVALID_ITEM_INSTANCE');
     const item = getItem(rules, instance.itemId);
+    requireCondition(isItemEnabled(item, rules), 'ITEM_DISABLED');
     const fields = ['instanceId', 'itemId', 'acquiredOrder', 'activeFromRound'];
     if (item.slot === 'charged') fields.push('remainingCharges');
     if (item.slot === 'timed') fields.push('remainingSpins');
+    if (item.effect.kind === 'refund_coins_every_n_item_purchases') fields.push('purchaseCounter');
     requireCondition(Object.keys(instance).length === fields.length && fields.every((field) => Object.hasOwn(instance, field)), 'INVALID_ITEM_INSTANCE');
     requireCondition(typeof instance.instanceId === 'string' && instance.instanceId.length > 0 && !ids.has(instance.instanceId), 'INVALID_ITEM_INSTANCE');
     requireCondition(positiveInteger(instance.acquiredOrder) && positiveInteger(instance.activeFromRound), 'INVALID_ITEM_INSTANCE');
     if (item.slot === 'charged') requireCondition(positiveInteger(instance.remainingCharges) && instance.remainingCharges <= item.initialCharges, 'INVALID_ITEM_INSTANCE');
     if (item.slot === 'timed') requireCondition(positiveInteger(instance.remainingSpins) && instance.remainingSpins <= item.durationSpins, 'INVALID_ITEM_INSTANCE');
+    if (item.effect.kind === 'refund_coins_every_n_item_purchases') requireCondition(Number.isSafeInteger(instance.purchaseCounter) && instance.purchaseCounter >= 0 && instance.purchaseCounter < item.effect.purchasesPerRefund, 'INVALID_ITEM_INSTANCE');
     ids.add(instance.instanceId);
     const count = (copies.get(item.id) ?? 0) + 1;
     requireCondition(count <= item.maxStacks, 'ITEM_CAP_REACHED');
@@ -54,6 +58,7 @@ export function acquireItem(inventory, itemId, rules, { activeFromRound } = {}) 
   const instance = { instanceId: `item-${inventory.nextItemOrder}`, itemId, acquiredOrder: inventory.nextItemOrder, activeFromRound };
   if (item.slot === 'charged') instance.remainingCharges = item.initialCharges;
   if (item.slot === 'timed') instance.remainingSpins = item.durationSpins;
+  if (item.effect.kind === 'refund_coins_every_n_item_purchases') instance.purchaseCounter = 0;
   const items = [...inventory.items.map((entry) => ({ ...entry })), instance];
   validateItems(items, rules);
   return { items, nextItemOrder: inventory.nextItemOrder + 1 };

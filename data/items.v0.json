@@ -1,5 +1,5 @@
 {
-  "version": "v0.8",
+  "version": "v0.11",
   "chanceUnits": "basis_points: 10000 = 100%",
   "items": [
     {
@@ -91,7 +91,8 @@
         "extraFactor": {
           "num": 2,
           "den": 1
-        }
+        },
+        "basePointAdd": "2"
       }
     },
     {
@@ -108,7 +109,8 @@
         "extraFactor": {
           "num": 3,
           "den": 2
-        }
+        },
+        "basePointAdd": "4"
       }
     },
     {
@@ -125,7 +127,8 @@
         "extraFactor": {
           "num": 5,
           "den": 4
-        }
+        },
+        "basePointAdd": "6"
       }
     },
     {
@@ -142,7 +145,8 @@
         "extraFactor": {
           "num": 1,
           "den": 1
-        }
+        },
+        "basePointAdd": "10"
       }
     },
     {
@@ -159,7 +163,8 @@
         "extraFactor": {
           "num": 3,
           "den": 4
-        }
+        },
+        "basePointAdd": "20"
       }
     },
     {
@@ -172,7 +177,7 @@
       "maxStacks": 1,
       "effect": {
         "kind": "random_candidate_edit",
-        "triggerChanceBasisPoints": 800,
+        "triggerChanceBasisPoints": 1600,
         "candidateSelection": "uniform_per_line",
         "boardPriority": "random_candidate_edit"
       },
@@ -203,7 +208,7 @@
       "effect": {
         "kind": "reroll_last_column",
         "condition": "no_completed_raw_lines",
-        "triggerChanceBasisPoints": 3000,
+        "triggerChanceBasisPoints": 6000,
         "boardPriority": "reroll_last_column"
       },
       "initialCharges": 3
@@ -236,7 +241,7 @@
       "effect": {
         "kind": "convert_random_nonseven_to_seven",
         "condition": "at_least_two_sevens",
-        "triggerChanceBasisPoints": 1000,
+        "triggerChanceBasisPoints": 2000,
         "boardPriority": "seven_transform"
       },
       "initialCharges": 2
@@ -267,7 +272,7 @@
       "maxStacks": 1,
       "effect": {
         "kind": "best_candidate_edit",
-        "triggerChanceBasisPoints": 500,
+        "triggerChanceBasisPoints": 1000,
         "candidateSelection": "best_delta_after_all_scoring",
         "boardPriority": "best_candidate_edit"
       },
@@ -283,7 +288,7 @@
       "maxStacks": 1,
       "effect": {
         "kind": "random_candidate_edit",
-        "triggerChanceBasisPoints": 1000,
+        "triggerChanceBasisPoints": 2000,
         "candidateSelection": "uniform_per_line",
         "selectedLineMultiplier": {
           "num": 3,
@@ -443,6 +448,201 @@
       "effect": {
         "kind": "round_hands_add",
         "amount": 1
+      }
+    },
+    {
+      "id": "square_seal",
+      "nameKo": "사각의 인장",
+      "rarity": "rare",
+      "price": 5,
+      "category": "score",
+      "slot": "permanent",
+      "maxStacks": 1,
+      "effect": {
+        "kind": "square_match_bonus",
+        "payoutFactor": {
+          "num": 1,
+          "den": 1
+        },
+        "usesWildCenter": false,
+        "countsAsRealWinningLine": false
+      }
+    },
+    {
+      "id": "seven_tracker",
+      "nameKo": "세븐 추적기",
+      "rarity": "rare",
+      "price": 4,
+      "category": "weight",
+      "slot": "permanent",
+      "maxStacks": 1,
+      "effect": {
+        "kind": "queue_next_hand_weight_if_symbol_absent",
+        "observedBoard": "finalPhysicalBoard",
+        "absentSymbol": "seven",
+        "bonusSymbol": "seven",
+        "bonusWeight": 4,
+        "bonusScope": "all_cells",
+        "durationHands": 1,
+        "pendingPolicy": "replace_same_instance",
+        "consumesOn": "next_actual_hand_draw"
+      }
+    },
+    {
+      "id": "mirror_copier",
+      "nameKo": "거울 복사기",
+      "rarity": "rare",
+      "price": 6,
+      "category": "board",
+      "slot": "charged",
+      "maxStacks": 1,
+      "initialCharges": 2,
+      "effect": {
+        "kind": "copy_physical_column",
+        "condition": "left_and_right_columns_differ",
+        "triggerChanceBasisPoints": 1000,
+        "sourceCellIndices": [
+          0,
+          3,
+          6
+        ],
+        "targetCellIndices": [
+          2,
+          5,
+          8
+        ],
+        "boardPriority": "mirror_copier",
+        "consumesPhysicalEditSlot": true,
+        "chargeOn": "at_least_one_physical_cell_changed"
+      }
+    },
+    {
+      "id": "temporary_wild",
+      "nameKo": "임시 와일드",
+      "rarity": "epic",
+      "price": 7,
+      "category": "board",
+      "slot": "charged",
+      "maxStacks": 1,
+      "initialCharges": 2,
+      "effect": {
+        "kind": "place_random_temporary_wild_mark",
+        "triggerChanceBasisPoints": 1200,
+        "candidateCells": "all_unmarked_indices",
+        "candidateSelection": "uniform_by_cell",
+        "appliesAfter": "physical_board_modification",
+        "wildDuration": "current_hand_only",
+        "changesPhysicalBoard": false,
+        "chargeOn": "mark_placed_even_without_new_win"
+      }
+    },
+    {
+      "id": "corner_collector",
+      "nameKo": "모서리 수집가",
+      "rarity": "rare",
+      "price": 5,
+      "category": "score",
+      "slot": "permanent",
+      "maxStacks": 2,
+      "effect": {
+        "kind": "award_pattern_points_if_equal_corners",
+        "sourceBoard": "finalPhysicalBoard",
+        "cornerCellIndices": [
+          0,
+          2,
+          6,
+          8
+        ],
+        "pointsPerStack": 500,
+        "scoreBucket": "patternBonus",
+        "countsAsActualLine": false
+      }
+    },
+    {
+      "id": "crossroads_bonus",
+      "nameKo": "교차로 보너스",
+      "rarity": "epic",
+      "price": 7,
+      "category": "score",
+      "slot": "permanent",
+      "maxStacks": 1,
+      "effect": {
+        "kind": "award_pattern_points_for_crossing_cells",
+        "lineSource": "actualWinningLines",
+        "minDistinctWinningLinesAtCell": 2,
+        "pointsPerCell": 200,
+        "maxRewardedCells": 3,
+        "countUniqueCells": true,
+        "includeWildResolvedActualLines": true,
+        "excludeVirtualLines": true,
+        "scoreBucket": "patternBonus"
+      }
+    },
+    {
+      "id": "receipt_collector",
+      "nameKo": "영수증 수집가",
+      "rarity": "common",
+      "price": 3,
+      "category": "economy",
+      "slot": "permanent",
+      "maxStacks": 1,
+      "effect": {
+        "kind": "refund_coins_every_n_item_purchases",
+        "triggerEvent": "ITEM_PURCHASED",
+        "eligibleEvent": "successful_item_purchase_after_payment",
+        "purchasesPerRefund": 3,
+        "refundCoins": 1,
+        "counterScope": "per_item_instance_across_shops",
+        "counterReset": "subtract_threshold_after_refund",
+        "activeFrom": "following_round",
+        "refundTime": "same_purchase_transaction",
+        "includeOwnAcquisition": false,
+        "excludeRerollsAndDiscards": true
+      }
+    },
+    {
+      "id": "emergency_lever",
+      "nameKo": "비상 레버",
+      "rarity": "legendary",
+      "price": 9,
+      "category": "hand",
+      "slot": "charged",
+      "maxStacks": 1,
+      "initialCharges": 1,
+      "effect": {
+        "kind": "grant_hand_before_run_failed",
+        "triggerEvent": "HAND_RESOLVED_BEFORE_FAILURE_CHECK",
+        "requiredHandsRemaining": 0,
+        "requiresRoundScoreBelowTarget": true,
+        "handsGranted": 1,
+        "ignoreRoundStartHandCap": true,
+        "automatic": true,
+        "chargeOn": "hand_granted",
+        "maxActivationsPerInstance": 1
+      }
+    },
+    {
+      "id": "editors_proof",
+      "nameKo": "편집자의 증명",
+      "rarity": "epic",
+      "price": 8,
+      "category": "score",
+      "slot": "permanent",
+      "maxStacks": 1,
+      "effect": {
+        "kind": "multiply_actual_line_payout_if_physical_board_changed",
+        "condition": "physicalChanged",
+        "lineSource": "actualWinningLines",
+        "factor": {
+          "num": 2,
+          "den": 1
+        },
+        "doesNotModify": [
+          "baseScore",
+          "virtualBonus",
+          "patternBonus"
+        ],
+        "includesWildResolvedActualLines": true
       }
     }
   ]

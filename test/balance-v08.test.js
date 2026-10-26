@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rules, rawRules, rawLegacyRules, cherryBoard, randomForBoard, scriptedRandom, seed } from './helpers.js';
+import { rawV08Rules as rawRules, rawLegacyRules, cherryBoard, randomForBoard, scriptedRandom, seed } from './helpers.js';
 import { parseRules } from '../src/domain/rules.js';
 import { createRun, applyAction } from '../src/domain/run.js';
 import { createShop, rerollShop } from '../src/domain/shop.js';
 import { calculateClearReward } from '../src/domain/economy.js';
 import { GameSession, replayAudit } from '../src/server/session.js';
 import { upgradeView } from '../src/server/upgrades.js';
+const rules = parseRules(rawRules());
 
 test('clear base grows each round; Hand and pre-settlement interest still add exactly', () => {
   for (let roundIndex = 1; roundIndex <= 10; roundIndex++) {

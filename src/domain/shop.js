@@ -4,6 +4,8 @@ import { acquireItem, discardItem, validateItems, activeItems } from './inventor
 import { assertCoins, safeAmount } from './money.js';
 import { createWeightedTable, drawSymbol } from './slot.js';
 import { drawInt } from './random-draw.js';
+import { isItemEnabled } from './selected8-contract.js';
+import { hasSelected8 } from './selected8.js';
 
 function assertShop(state) {
   requireCondition(state.phase === 'SHOP' && state.shop !== null && typeof state.shop === 'object', 'INVALID_RUN_PHASE');
@@ -18,7 +20,7 @@ export function createShop(state, rules, rng, { offerSequence = 0, paidRerolls =
   }
   const counts = new Map();
   for (const instance of state.items) counts.set(instance.itemId, (counts.get(instance.itemId) ?? 0) + 1);
-  let pool = rules.catalog.items.filter((item) => state.roundIndex >= (item.minShopRound ?? 1) && (counts.get(item.id) ?? 0) < item.maxStacks);
+  let pool = rules.catalog.items.filter((item) => isItemEnabled(item, rules) && state.roundIndex >= (item.minShopRound ?? 1) && (counts.get(item.id) ?? 0) < item.maxStacks);
   const randomTrace = [];
   const slots = Array.from({ length: rules.balance.shop.slots }, (_, index) => {
     const slotId = `round-${state.roundIndex}-offer-${offerSequence}-slot-${index}`;
@@ -104,13 +106,26 @@ export function buyItem(previous, slotId, rules) {
   const quote = purchaseQuote(previous, slot, rules);
   requireCondition(quote.canBuy, quote.blockedReason);
   const inventory = acquireItem(previous, slot.itemId, rules, { activeFromRound: previous.roundIndex + 1 });
-  const coins = safeAmount(BigInt(previous.coins) - BigInt(quote.price));
+  let coins = safeAmount(BigInt(previous.coins) - BigInt(quote.price));
+  const refunds = [];
+  for (const source of activeItems(previous.items, rules, previous.roundIndex)) {
+    const effect = getItem(rules, source.itemId).effect;
+    if (effect.kind !== 'refund_coins_every_n_item_purchases') continue;
+    const instance = inventory.items.find((item) => item.instanceId === source.instanceId);
+    instance.purchaseCounter += 1;
+    if (instance.purchaseCounter === effect.purchasesPerRefund) {
+      instance.purchaseCounter = 0;
+      coins = safeAmount(BigInt(coins) + BigInt(effect.refundCoins));
+      refunds.push({ type: 'RECEIPT_REFUNDED', instanceId: source.instanceId, itemId: source.itemId, coins: effect.refundCoins });
+    }
+  }
   return {
     state: {
       ...previous, ...inventory, coins,
       shop: { ...previous.shop, slots: previous.shop.slots.map((entry) => entry.slotId === slotId ? { ...entry, itemId: null, soldOut: true } : { ...entry }) },
     },
-    event: { type: 'ITEM_PURCHASED', slotId, itemId: slot.itemId, instanceId: inventory.items.at(-1).instanceId, price: quote.price, coinsBefore: previous.coins, coinsAfter: coins },
+    event: { type: 'ITEM_PURCHASED', slotId, itemId: slot.itemId, instanceId: inventory.items.at(-1).instanceId, price: quote.price, coinsBefore: previous.coins, coinsAfter: coins,
+      ...(hasSelected8(rules) ? { refunds, refundCoins: refunds.reduce((sum, refund) => sum + refund.coins, 0) } : {}) },
   };
 }
 
@@ -134,7 +149,7 @@ export function discardShopItem(previous, instanceId, rules) {
   const inventory = discardItem(previous, instanceId, rules);
   const removed = previous.items.find((item) => item.instanceId === instanceId);
   return {
-    state: { ...previous, ...inventory },
+    state: { ...previous, ...inventory, ...(hasSelected8(rules) ? { pendingNextHandWeightBuffs: previous.pendingNextHandWeightBuffs.filter((buff) => buff.sourceInstanceId !== instanceId) } : {}) },
     event: { type: 'ITEM_DISCARDED', instanceId, itemId: removed.itemId, coinsBefore: previous.coins, coinsAfter: previous.coins, refund: 0 },
   };
 }

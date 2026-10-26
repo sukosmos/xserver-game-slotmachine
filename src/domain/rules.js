@@ -1,5 +1,6 @@
 import { exactInteger } from './exact.js';
 import { GameError, requireCondition } from './errors.js';
+import { selected8Contracts } from './selected8-contract.js';
 
 export const MAX_RANDOM_BOUND = 2 ** 32;
 const symbolIds = ['cherry', 'lemon', 'bell', 'diamond', 'seven'];
@@ -8,6 +9,10 @@ const lineGeometry = {
   row_top: [0, 1, 2], row_middle: [3, 4, 5], row_bottom: [6, 7, 8],
   col_left: [0, 3, 6], col_middle: [1, 4, 7], col_right: [2, 5, 8],
   diag_main: [0, 4, 8], diag_anti: [2, 4, 6],
+};
+const squareGeometry = {
+  square_top_left: [0, 1, 4, 3], square_top_right: [1, 2, 5, 4],
+  square_bottom_left: [3, 4, 7, 6], square_bottom_right: [4, 5, 8, 7],
 };
 
 function fail(path, message) { throw new GameError('INVALID_RULES', `${path}: ${message}`); }
@@ -49,8 +54,8 @@ export function deepFreeze(value) {
 
 // Catalog validation is deliberately separate from effect execution (Phase 2+).
 const effectSpecs = {
-  weight_add: ['weight', ['symbol', 'amount']],
-  symbol_line_add_factor: ['payout', ['symbol', 'extraFactor']],
+  weight_add: ['weight', ['symbol', 'amount'], ['basePointAdd']],
+  symbol_line_add_factor: ['payout', ['symbol', 'extraFactor'], ['basePointAdd']],
   random_candidate_edit: ['board', ['triggerChanceBasisPoints', 'candidateSelection', 'boardPriority'], ['selectedLineMultiplier']],
   wild_center: ['board', ['changesVisualSymbol']],
   reroll_last_column: ['board', ['condition', 'triggerChanceBasisPoints', 'boardPriority']],
@@ -67,6 +72,8 @@ const effectSpecs = {
   shop_item_cost_subtract: ['economy', ['amount', 'minPrice']],
   chance_coins_on_clear: ['economy', ['triggerChanceBasisPoints', 'coins']],
   round_hands_add: ['resource', ['amount']],
+  square_match_bonus: ['score', ['payoutFactor', 'usesWildCenter', 'countsAsRealWinningLine']],
+  ...Object.fromEntries(Object.entries(selected8Contracts).map(([kind, spec]) => [kind, [spec.category, spec.fields]])),
 };
 
 function validateItem(item, path) {
@@ -89,15 +96,29 @@ function validateItem(item, path) {
   const [category, required, optional = []] = effectSpecs[effect.kind];
   literal(item.category, category, `${path}.category`);
   if (['economy', 'resource'].includes(category)) literal(item.slot, 'permanent', `${path}.slot`);
+  if (effect.kind === 'square_match_bonus') {
+    literal(item.slot, 'permanent', `${path}.slot`);
+    literal(item.maxStacks, 1, `${path}.maxStacks`);
+  }
   keys(effect, ['kind', ...required], optional, `${path}.effect`);
+  const selected = selected8Contracts[effect.kind];
+  if (selected) {
+    literal(item.slot, selected.slot, `${path}.slot`);
+    literal(item.maxStacks, selected.maxStacks, `${path}.maxStacks`);
+    if (effect.kind === 'grant_hand_before_run_failed') literal(item.initialCharges, 1, `${path}.initialCharges`);
+    for (const [key, value] of Object.entries(selected.constants)) {
+      check(JSON.stringify(effect[key]) === JSON.stringify(value), `${path}.effect.${key}`, 'unsupported policy');
+    }
+  }
   for (const [key, value] of Object.entries(effect)) {
     const field = `${path}.effect.${key}`;
     if (key === 'symbol') oneOf(value, symbolIds, field);
-    if (['amount', 'minPrice', 'coins', 'maxExponent'].includes(key)) integer(value, field, 1);
+    if (['amount', 'minPrice', 'coins', 'maxExponent', 'bonusWeight', 'purchasesPerRefund', 'refundCoins'].includes(key)) integer(value, field, 1);
+    if (key === 'maxRewardedCells') integer(value, field, 1, 9);
     if (key === 'minRealWinningLines') integer(value, field, 1, 8);
     if (key === 'triggerChanceBasisPoints') integer(value, field, 1, 10000);
-    if (key === 'fixedPoints') score(value, field);
-    if (['extraFactor', 'selectedLineMultiplier', 'factor', 'forSeven', 'forOther', 'perRealLineFactor', 'factorPerExtraHit'].includes(key)) fraction(value, field);
+    if (['fixedPoints', 'basePointAdd', 'pointsPerStack', 'pointsPerCell'].includes(key)) score(value, field);
+    if (['extraFactor', 'selectedLineMultiplier', 'factor', 'forSeven', 'forOther', 'perRealLineFactor', 'factorPerExtraHit', 'payoutFactor'].includes(key)) fraction(value, field);
   }
   const constants = {
     random_candidate_edit: { candidateSelection: 'uniform_per_line', boardPriority: 'random_candidate_edit' },
@@ -108,6 +129,7 @@ function validateItem(item, path) {
     wild_center: { changesVisualSymbol: false },
     zero_base_plus_per_real_line_factor: { doesNotMultiplyVirtualBonus: true },
     consecutive_win_multiplier: { resetOnNoLine: true },
+    square_match_bonus: { usesWildCenter: false, countsAsRealWinningLine: false },
   };
   for (const [key, expected] of Object.entries(constants[effect.kind] ?? {})) literal(effect[key], expected, `${path}.effect.${key}`);
 }
@@ -136,7 +158,7 @@ export function parseRules(input) {
   check(balance.symbols.reduce((sum, symbol) => sum + symbol.weight, 0) <= MAX_RANDOM_BOUND, 'balance.symbols', 'weight total exceeds RNG range');
 
   const round = balance.round;
-  keys(round, ['baseHands', 'maxRoundMvp', 'roundTargets', 'carryRoundScore', 'carryCoins', 'carryItems'], ['autoClearOnTarget', 'maxExtraHands'], 'balance.round');
+  keys(round, ['baseHands', 'maxRoundMvp', 'roundTargets', 'carryRoundScore', 'carryCoins', 'carryItems'], ['autoClearOnTarget', 'maxExtraHands', 'milestoneCards'], 'balance.round');
   if (Object.hasOwn(round, 'autoClearOnTarget')) literal(round.autoClearOnTarget, true, 'balance.round.autoClearOnTarget');
   integer(round.baseHands, 'balance.round.baseHands', 1);
   if (Object.hasOwn(round, 'maxExtraHands')) integer(round.maxExtraHands, 'balance.round.maxExtraHands', 0, Number.MAX_SAFE_INTEGER - round.baseHands);
@@ -177,18 +199,21 @@ export function parseRules(input) {
     bestCandidateTieBreak: 'line_definition_order', bestCandidateVirtualRolls: 'shared_lazy_per_spin',
     consecutiveWinsCarryAcrossRounds: true,
   };
-  keys(balance.itemRules, [...Object.keys(itemFlags), 'boardModifierPriority'], [], 'balance.itemRules');
+  keys(balance.itemRules, [...Object.keys(itemFlags), 'boardModifierPriority'], ['selected8Items'], 'balance.itemRules');
+  if (Object.hasOwn(balance.itemRules, 'selected8Items')) check(typeof balance.itemRules.selected8Items === 'boolean', 'balance.itemRules.selected8Items', 'expected boolean');
   for (const [key, value] of Object.entries(itemFlags)) literal(balance.itemRules[key], value, `balance.itemRules.${key}`);
   const priorities = balance.itemRules.boardModifierPriority;
   array(priorities, 'balance.itemRules.boardModifierPriority');
   unique(priorities, 'balance.itemRules.boardModifierPriority');
-  check(priorities.length === 4, 'balance.itemRules.boardModifierPriority', 'expected all four groups');
-  for (const priority of priorities) oneOf(priority, ['reroll_last_column', 'best_candidate_edit', 'random_candidate_edit', 'seven_transform'], 'balance.itemRules.boardModifierPriority');
+  const allowedPriorities = ['reroll_last_column', 'best_candidate_edit', 'random_candidate_edit', 'seven_transform'];
+  if (Object.hasOwn(balance.itemRules, 'selected8Items')) allowedPriorities.push('mirror_copier');
+  check(priorities.length === allowedPriorities.length, 'balance.itemRules.boardModifierPriority', 'expected all groups');
+  for (const priority of priorities) oneOf(priority, allowedPriorities, 'balance.itemRules.boardModifierPriority');
   keys(balance.ranking, ['sortOrder', 'oneBestRecordPerAccount'], [], 'balance.ranking');
   check(JSON.stringify(balance.ranking.sortOrder) === JSON.stringify(['completedRounds_desc', 'runTotalScore_desc', 'endedAt_asc']), 'balance.ranking.sortOrder', 'unsupported ranking order');
   literal(balance.ranking.oneBestRecordPerAccount, true, 'balance.ranking.oneBestRecordPerAccount');
 
-  keys(lines, ['version', 'lines'], [], 'lines');
+  keys(lines, ['version', 'lines'], ['squares'], 'lines');
   literal(lines.version, balance.version, 'lines.version');
   array(lines.lines, 'lines.lines');
   check(lines.lines.length === 8, 'lines.lines', 'expected eight paylines');
@@ -204,20 +229,63 @@ export function parseRules(input) {
     check(JSON.stringify([...line.indices].sort()) === JSON.stringify(lineGeometry[line.id]), path, 'line ID does not match row/column/diagonal geometry');
   }
 
+  if (Object.hasOwn(lines, 'squares')) {
+    array(lines.squares, 'lines.squares');
+    check(lines.squares.length === 4, 'lines.squares', 'expected four squares');
+    unique(lines.squares.map((square) => square?.id), 'lines.squares');
+    for (const [index, square] of lines.squares.entries()) {
+      const path = `lines.squares[${index}]`;
+      keys(square, ['id', 'indices'], [], path);
+      check(Object.hasOwn(squareGeometry, square.id), `${path}.id`, 'unknown square ID');
+      array(square.indices, `${path}.indices`);
+      check(JSON.stringify(square.indices) === JSON.stringify(squareGeometry[square.id]), path, 'expected clockwise 2x2 geometry');
+    }
+  }
+
   keys(catalog, ['version', 'chanceUnits', 'items'], [], 'catalog');
   literal(catalog.version, balance.version, 'catalog.version');
   literal(catalog.chanceUnits, 'basis_points: 10000 = 100%', 'catalog.chanceUnits');
   array(catalog.items, 'catalog.items');
   check(catalog.items.length > 0, 'catalog.items', 'empty catalog');
   for (const [index, item] of catalog.items.entries()) validateItem(item, `catalog.items[${index}]`);
+  if (catalog.items.some((item) => item.effect.kind === 'square_match_bonus')) check(lines.squares?.length === 4, 'lines.squares', 'square item requires geometry');
   if (catalog.items.some((item) => item.effect.kind === 'round_hands_add')) integer(round.maxExtraHands, 'balance.round.maxExtraHands', 1);
   unique(catalog.items.map((item) => item.id), 'catalog.items');
+  if (round.milestoneCards !== undefined) {
+    const config = round.milestoneCards;
+    keys(config, ['afterRound','cards'], [], 'milestoneCards');
+    integer(config.afterRound, 'milestoneCards.afterRound', 1);
+    array(config.cards, 'milestoneCards.cards');
+    check(config.cards.length === 3, 'milestoneCards.cards', 'expected three rewards');
+    unique(config.cards.map((c) => c.id), 'milestoneCards.cards');
+    const kinds = ['remove_weighted_symbol','grant_symbol_upgrades','first_hand_wild_each_round'];
+    unique(config.cards.map((c) => c.effect?.kind), 'milestoneCards.effects');
+    for (const card of config.cards) {
+      keys(card, ['id','nameKo','effect'], [], 'milestoneCards.card');
+      text(card.id, 'milestoneCards.id'); text(card.nameKo, 'milestoneCards.nameKo');
+      oneOf(card.effect.kind, kinds, 'milestoneCards.kind');
+      if (card.effect.kind === 'remove_weighted_symbol') {
+        keys(card.effect, ['kind','redistribution'], [], 'milestoneCards.effect');
+        literal(card.effect.redistribution, 'proportional', 'milestoneCards.redistribution');
+      } else if (card.effect.kind === 'grant_symbol_upgrades') {
+        keys(card.effect, ['kind','itemIds'], [], 'milestoneCards.effect');
+        array(card.effect.itemIds, 'milestoneCards.itemIds'); unique(card.effect.itemIds, 'milestoneCards.itemIds');
+        check(card.effect.itemIds.length === 5, 'milestoneCards.itemIds', 'one upgrade per symbol required');
+        const upgrades = card.effect.itemIds.map((id) => catalog.items.find((i) => i.id === id)?.effect);
+        check(upgrades.every((e) => e?.kind === 'symbol_line_add_factor' && e.basePointAdd !== undefined), 'milestoneCards.itemIds', 'requires score and payout upgrades');
+        unique(upgrades.map((e) => e.symbol), 'milestoneCards.symbols');
+      } else {
+        keys(card.effect, ['kind','cellIndex'], [], 'milestoneCards.effect');
+        literal(card.effect.cellIndex, 4, 'milestoneCards.cellIndex');
+      }
+    }
+  }
   const symbols = balance.symbols.map((symbol) => ({ ...symbol, basePoint: exactInteger(symbol.basePoint), linePayout: exactInteger(symbol.linePayout) }));
   return deepFreeze({
     balance, catalog, lineDefinitions: lines,
     rulesVersion: balance.version, catalogVersion: catalog.version, linesVersion: lines.version,
     symbols, symbolsById: Object.fromEntries(symbols.map((symbol) => [symbol.id, symbol])),
-    lines: lines.lines,
+    lines: lines.lines, squares: lines.squares ?? [],
     itemsById: Object.fromEntries(catalog.items.map((item) => [item.id, item])),
     targets: round.roundTargets.map((target) => exactInteger(target.targetScore)),
   });

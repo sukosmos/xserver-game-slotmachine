@@ -1,10 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { loadRules } from '../src/server/load-rules.js';
 import { parseRules } from '../src/domain/rules.js';
 
 export const rules = loadRules();
 // Keep explicit v0.6 fixtures for stored manual-settlement replay regressions.
 export function rawLegacyRules() {
-  const raw = rawRules();
+  const raw = rawV08Rules();
   for (const part of Object.values(raw)) part.version = 'v0.6';
   delete raw.balance.round.autoClearOnTarget;
   delete raw.balance.round.maxExtraHands;
@@ -54,4 +55,16 @@ export function randomForBoard(board, config = rules, extra = []) {
 
 export function rawRules() {
   return structuredClone({ balance: rules.balance, lines: rules.lineDefinitions, catalog: rules.catalog });
+}
+
+export function rawV08Rules() {
+  return JSON.parse(readFileSync(new URL('./fixtures/rules-v08.json', import.meta.url), 'utf8'));
+}
+
+export function rawV09Rules() {
+  return JSON.parse(readFileSync(new URL('./fixtures/rules-v09.json', import.meta.url), 'utf8'));
+}
+
+export function rawV010Rules() {
+  return JSON.parse(readFileSync(new URL('./fixtures/rules-v010.json', import.meta.url), 'utf8'));
 }

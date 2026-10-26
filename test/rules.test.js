@@ -5,10 +5,10 @@ import { loadRules } from '../src/server/load-rules.js';
 import { rules, rawRules } from './helpers.js';
 
 test('load and freeze all three catalogs; compile scores to BigInt', () => {
-  assert.equal(rules.catalog.items.length, 28);
+  assert.equal(rules.catalog.items.length, 37);
   assert.equal(rules.lines.length, 8);
   assert.equal(rules.symbolsById.seven.linePayout, 1500n);
-  assert.equal(getItem(rules, 'miracle_hand').effect.triggerChanceBasisPoints, 800);
+  assert.equal(getItem(rules, 'miracle_hand').effect.triggerChanceBasisPoints, 1600);
   assert.throws(() => getItem(rules, 'unknown'), { code: 'UNKNOWN_ITEM' });
   assert.throws(() => getItem(rules, 'toString'), { code: 'UNKNOWN_ITEM' });
   assert.throws(() => { rules.catalog.items[0].price = 99; }, TypeError);
@@ -19,6 +19,12 @@ test('load and freeze all three catalogs; compile scores to BigInt', () => {
 });
 
 const invalidCases = [
+  ['negative cell bonus', (r) => { r.catalog.items[0].effect.basePointAdd = '-1'; }],
+  ['unsafe numeric cell bonus', (r) => { r.catalog.items[0].effect.basePointAdd = 9007199254740992; }],
+  ['missing square geometry', (r) => { delete r.lines.squares; }],
+  ['invalid square geometry', (r) => { r.lines.squares[0].indices = [0, 1, 2, 3]; }],
+  ['duplicate square', (r) => { r.lines.squares[1] = r.lines.squares[0]; }],
+  ['unsupported square wild', (r) => { r.catalog.items.at(-1).effect.usesWildCenter = true; }],
   ['negative reward growth', (r) => { r.balance.economy.clearRewardPerRound = -1; }],
   ['fractional Hand cap', (r) => { r.balance.round.maxExtraHands = 1.5; }],
   ['unsafe total Hands', (r) => { r.balance.round.maxExtraHands = Number.MAX_SAFE_INTEGER; }],

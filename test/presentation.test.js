@@ -17,7 +17,7 @@ test('descriptions use percentages and exact current streak multipliers reach th
     const view = spinPresentation(event, rules);
     assert.equal(view.multiplier, `×${multiplier}`);
     assert.equal(view.effects.some((e) => e.itemId === 'win_streak'), consecutiveWinHands > 0);
-    assert.equal(view.effects.find((e) => e.itemId === 'golden_harvest').label, '배당 +200%');
+    assert.equal(view.effects.find((e) => e.itemId === 'golden_harvest').label, '배당 +200% · 1칸 +2');
   }
 });
 test('inactive conditions do not claim activation; real board triggers and expiry are shown', () => {

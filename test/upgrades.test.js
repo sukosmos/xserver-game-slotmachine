@@ -15,13 +15,13 @@ test('baseline shows exact points, line payout and normalized draw chance', () =
   assert.deepEqual(symbol(view.current), { id: 'cherry', basePoint: '1', point: '1', baseLinePayout: '30', linePayout: '30', baseWeight: 30, weight: 30, baseProbability: '30.00%', probability: '30.00%', sources: [] });
 });
 
-test('weight changes all probabilities; payout stacks add without changing base points', () => {
+test('weight changes probabilities; payout stacks raise cell points and line payout', () => {
   const state = createRun(rules, { initialItemIds: ['cherry_farm', 'golden_harvest', 'golden_harvest'] });
   const view = upgradeView(state, rules).current;
   assert.equal(view.totalWeight, 110);
   assert.equal(symbol(view).probability, '36.36%');
   assert.equal(symbol(view, 'lemon').probability, '22.73%');
-  assert.equal(symbol(view).point, '1'); assert.equal(symbol(view).linePayout, '150');
+  assert.equal(symbol(view).point, '5'); assert.equal(symbol(view).linePayout, '150');
   assert.deepEqual(symbol(view).sources, [{ itemId: 'cherry_farm', stacks: 1 }, { itemId: 'golden_harvest', stacks: 2 }]);
 });
 

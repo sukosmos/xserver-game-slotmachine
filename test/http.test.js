@@ -34,19 +34,98 @@ async function setup(t, serverOptions = {}, mutate = () => {}) {
   return { store, token, otherToken, server, call, url };
 }
 
+async function sharedCall(url, path, { body, cookie, origin = 'https://nine.example', host = 'nine.example', key } = {}) {
+  return new Promise((resolve, reject) => {
+    const req = request(`${url}/api/game/v1${path}`, {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: { Host: host, ...(origin ? { Origin: origin } : {}), ...(cookie ? { Cookie: cookie } : {}),
+        ...(key ? { 'Idempotency-Key': key } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+    }, (res) => {
+      let output = ''; res.setEncoding('utf8'); res.on('data', (chunk) => { output += chunk; });
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, data: JSON.parse(output) }));
+    });
+    req.on('error', reject); req.end(body === undefined ? undefined : JSON.stringify(body));
+  });
+}
+
+test('shared guests have separate ownership, secure cookies and resumable idempotent games', async (t) => {
+  const { url } = await setup(t, { guestOrigin: 'https://nine.example' });
+  assert.equal((await sharedCall(url, '/bootstrap')).data.guestPlay, true);
+  const a = await sharedCall(url, '/guest-session', { body: {} });
+  const b = await sharedCall(url, '/guest-session', { body: {} });
+  assert.equal(a.status, 200); assert.notEqual(a.data.playerId, b.data.playerId);
+  const header = a.headers['set-cookie'][0];
+  assert.match(header, /^__Secure-nine_guest=/); assert.match(header, /HttpOnly; Secure; SameSite=Strict; Path=\/api\/game\/v1/);
+  const cookie = header.split(';')[0], otherCookie = b.headers['set-cookie'][0].split(';')[0];
+  const again = await sharedCall(url, '/guest-session', { body: {}, cookie });
+  assert.equal(again.headers['set-cookie'][0], header); assert.deepEqual(again.data, a.data);
+  const created = await sharedCall(url, '/runs', { body: {}, cookie, key: 'shared-create' });
+  assert.equal(created.status, 201);
+  const id = created.data.state.runId;
+  assert.equal((await sharedCall(url, `/runs/${id}`, { cookie: otherCookie })).status, 404);
+  assert.equal((await sharedCall(url, `/runs/${id}/spins`, { body: { expectedRevision: 0 }, cookie: otherCookie, key: 'other' })).status, 404);
+  const spin = await sharedCall(url, `/runs/${id}/spins`, { body: { expectedRevision: 0 }, cookie, key: 'shared-spin' });
+  assert.equal(spin.status, 200);
+  assert.deepEqual((await sharedCall(url, `/runs/${id}/spins`, { body: { expectedRevision: 0 }, cookie, key: 'shared-spin' })).data, spin.data);
+  assert.deepEqual((await sharedCall(url, `/runs/${id}`, { cookie })).data.state, spin.data.state);
+});
+
+test('shared sessions reject foreign hosts, origins, local credentials and chosen identities', async (t) => {
+  const { url, token } = await setup(t, { guestOrigin: 'https://nine.example' });
+  for (const origin of [null, 'http://nine.example', 'https://evil.example']) {
+    assert.equal((await sharedCall(url, '/guest-session', { body: {}, origin })).status, 403);
+  }
+  assert.equal((await sharedCall(url, '/bootstrap', { host: 'evil.example' })).status, 403);
+  assert.equal((await sharedCall(url, '/guest-session', { body: { userId: 'alice' } })).status, 400);
+  assert.equal((await sharedCall(url, '/local-session', { body: {} })).status, 404);
+  assert.equal((await sharedCall(url, '/me', { cookie: `nine_session=${token}` })).status, 401);
+  assert.equal((await sharedCall(url, '/me', { cookie: `__Secure-nine_guest=${token}` })).status, 401);
+  const connected = await sharedCall(url, '/guest-session', { body: {} });
+  const cookie = connected.headers['set-cookie'][0].split(';')[0];
+  assert.equal((await sharedCall(url, '/runs', { body: {}, cookie, key: 'csrf', origin: null })).status, 403);
+  assert.equal((await sharedCall(url, '/runs', { body: {}, cookie, key: 'csrf', origin: 'https://evil.example' })).status, 403);
+  assert.equal((await sharedCall(url, '/me', { cookie, host: 'evil.example' })).status, 403);
+});
+
+test('guest creation is capped without preventing established guest reconnection', async (t) => {
+  const { url } = await setup(t, { guestOrigin: 'https://nine.example' });
+  let cookie;
+  for (let i = 0; i < 32; i++) {
+    const session = await sharedCall(url, '/guest-session', { body: {} });
+    assert.equal(session.status, 200); cookie ??= session.headers['set-cookie'][0].split(';')[0];
+  }
+  assert.equal((await sharedCall(url, '/guest-session', { body: {} })).status, 429);
+  assert.equal((await sharedCall(url, '/guest-session', { body: {}, cookie })).status, 200);
+});
+
+test('guest mode is opt-in and only accepts a clean HTTPS origin separate from local play', async (t) => {
+  const { call, store } = await setup(t);
+  assert.equal((await call('/guest-session', { auth: null, body: {} })).status, 404);
+  for (const guestOrigin of ['http://nine.example', 'https://nine.example/path', 'https://nine.example/', 'https://a:b@nine.example', 'bad']) {
+    assert.throws(() => createGameServer({ store, guestOrigin }));
+  }
+  assert.throws(() => createGameServer({ store, guestOrigin: 'https://nine.example', localPlayer: 'local-player' }));
+});
+
 test('current HTTP rules grant three coins, auto settle, and activate purchased Hands next round', async (t) => {
   const { call } = await setup(t, {}, (raw) => {
     Object.assign(raw, currentRawRules());
+    delete raw.balance.round.milestoneCards; // Isolated shop pool; cards have separate HTTP coverage.
     raw.balance.round.roundTargets[0].targetScore = '1';
-    raw.catalog.items = raw.catalog.items.filter((item) => ['cherry_farm', 'golden_harvest', 'extra_hand'].includes(item.id));
+    raw.catalog.items = raw.catalog.items.filter((item) => ['cherry_farm', 'golden_harvest', 'extra_hand', 'square_seal', 'win_streak'].includes(item.id));
   });
   const created = (await call('/runs', { body: {}, key: 'auto-create' })).data;
   assert.equal(created.state.coins, 3);
   const id = created.state.runId;
   const first = await call(`/runs/${id}/spins`, { body: { expectedRevision: 0 }, key: 'auto-spin' });
   assert.equal(first.status, 200); assert.equal(first.data.state.phase, 'SHOP');
-  assert.equal(first.data.state.coins, 9); assert.equal(first.data.event.settlement.handBonus, 4);
+  assert.equal(first.data.state.coins, 10); assert.equal(first.data.event.settlement.handBonus, 4);
   assert.equal(first.data.presentation.multiplier, '×1');
+  assert.equal(first.data.event.patternScore, '0');
+  assert.deepEqual(first.data.event.winningPatterns, []);
+  assert.ok(first.data.presentation.awards.every((award) => award.kind === 'line' && typeof award.score === 'string' && award.indices.length === 3));
+  assert.equal(first.data.state.shop.slots.length, 4);
+  assert.equal(new Set(first.data.state.shop.slots.map((slot) => slot.itemId)).size, 4);
   assert.deepEqual((await call(`/runs/${id}`)).data.presentation, first.data.presentation);
   assert.equal(first.data.state.revision, 1); assert.equal(first.data.state.canClaim, false);
   assert.deepEqual((await call(`/runs/${id}/spins`, { body: { expectedRevision: 0 }, key: 'auto-spin' })).data, first.data);
@@ -56,13 +135,37 @@ test('current HTTP rules grant three coins, auto settle, and activate purchased 
   assert.ok(!first.data.state.shop.slots.some((slot) => slot.itemId === 'cherry_farm'));
   const hand = first.data.state.shop.slots.find((slot) => slot.itemId === 'extra_hand');
   const bought = (await call(`/runs/${id}/shop/purchases`, { body: { expectedRevision: 1, slotId: hand.slotId }, key: 'buy' })).data;
-  assert.equal(bought.state.coins, 4); assert.equal(bought.upgrades.next.hands, 6);
+  assert.equal(bought.state.coins, 5); assert.equal(bought.upgrades.next.hands, 6);
   const rerolled = (await call(`/runs/${id}/shop/rerolls`, { body: { expectedRevision: 2 }, key: 'reroll' })).data;
-  assert.equal(rerolled.state.coins, 3);
+  assert.equal(rerolled.state.coins, 4);
   const next = (await call(`/runs/${id}/shop/continue`, { body: { expectedRevision: 3 }, key: 'next' })).data;
-  assert.equal(next.state.coins, 3); assert.equal(next.state.roundIndex, 2); assert.equal(next.state.handsRemaining, 6);
+  assert.equal(next.state.coins, 4); assert.equal(next.state.roundIndex, 2); assert.equal(next.state.handsRemaining, 6);
   assert.equal(next.state.roundHands, 6); assert.equal(next.upgrades.current.hands, 6);
   assert.deepEqual((await call('/runs', { body: {}, key: 'auto-create' })).data, created);
+});
+
+test('card choice HTTP hides the order, validates ownership and commits exactly one choice', async (t) => {
+  const { call, otherToken } = await setup(t, {}, (raw) => {
+    Object.assign(raw, currentRawRules());
+    raw.balance.round.roundTargets.forEach((row) => { row.targetScore = '1'; });
+  });
+  let current = (await call('/runs', { body:{}, key:'card-run' })).data;
+  const id = current.state.runId;
+  for (let round=1;round<=3;round++) {
+    current = (await call(`/runs/${id}/spins`, { body:{expectedRevision:current.state.revision}, key:`spin-${round}` })).data;
+    if(round<3) current=(await call(`/runs/${id}/shop/continue`,{body:{expectedRevision:current.state.revision},key:`continue-${round}`})).data;
+  }
+  assert.equal(current.state.phase,'CARD_CHOICE'); assert.equal(current.state.shop,null);
+  for(const privateField of ['cardOffer','cardId','milestone_shuffle','rngBefore']) assert.ok(!JSON.stringify(current).includes(privateField));
+  const body={expectedRevision:current.state.revision,slotId:current.state.cardChoice.slots[0].slotId};
+  assert.equal((await call(`/runs/${id}/cards/choice`,{body,key:'not-owner',auth:otherToken})).status,404);
+  assert.equal((await call(`/runs/${id}/cards/choice`,{body:{...body,cardId:'evolve'},key:'inject'})).status,400);
+  assert.equal((await call(`/runs/${id}/cards/choice`,{body:{...body,slotId:'evolve'},key:'unknown'})).status,409);
+  const chosen=await call(`/runs/${id}/cards/choice`,{body,key:'chosen'});
+  assert.equal(chosen.status,200); assert.equal(chosen.data.state.phase,'SHOP');
+  assert.equal(chosen.data.state.coins,current.state.coins);
+  assert.deepEqual((await call(`/runs/${id}/cards/choice`,{body,key:'chosen'})).data,chosen.data);
+  assert.equal((await call(`/runs/${id}/cards/choice`,{body,key:'race'})).status,409);
 });
 
 test('static allowlist serves the game with CSP and never serves source or private files', async (t) => {

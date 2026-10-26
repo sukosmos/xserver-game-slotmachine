@@ -5,6 +5,7 @@ import { getShopView } from '../domain/shop.js';
 import { stringifyExact } from '../domain/exact.js';
 import { requireCondition } from '../domain/errors.js';
 import { CounterRandom, generateSeed, RNG_VERSION } from './random.js';
+import { hasMilestone, milestoneRewardView } from '../domain/milestone.js';
 
 function jsonValue(value) { return JSON.parse(stringifyExact(value)); }
 
@@ -29,8 +30,11 @@ function publicState(runId, state, rules) {
     roundScore: state.roundScore, runTotalScore: state.runTotalScore, targetScore: state.targetScore,
     handsRemaining: state.handsRemaining, canClaim: canClaim(state), revision: state.revision,
     ...(state.roundHands !== undefined ? { roundHands: state.roundHands } : {}),
-    items: state.items.map(({ instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins }) => ({
-      instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins,
+    ...(state.handSequence !== undefined ? { handSequence: state.handSequence, pendingNextHandWeightBuffs: state.pendingNextHandWeightBuffs } : {}),
+    ...(hasMilestone(rules) ? { cardChoice:state.phase === 'CARD_CHOICE' ? { slots:state.cardOffer.map(({ slotId }) => ({ slotId })) } : null,
+      milestoneReward:milestoneRewardView(state, rules), roundWildAvailable:state.roundWildAvailable } : {}),
+    items: state.items.map(({ instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins, purchaseCounter }) => ({
+      instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins, purchaseCounter,
     })),
     consecutiveWinHands: state.consecutiveWinHands, coins: state.coins, shop: getShopView(state, rules),
   });

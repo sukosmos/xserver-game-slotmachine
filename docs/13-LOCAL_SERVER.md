@@ -41,10 +41,10 @@ curl http://127.0.0.1:3000/api/game/v1/leaderboard \
   -H 'Authorization: Bearer <TOKEN>'
 ```
 
-생성 응답은 `{state,upgrades}`, 액션은 `{state,event,upgrades}`다. `state.revision`을 다음 요청에 사용한다. 새 런은 2코인으로 시작하며 목표 달성 스핀에서 자동 정산한다. `shop/purchases`에 `{expectedRevision,slotId}`, `shop/rerolls`에 `{expectedRevision}`, `shop/discards`에 `{expectedRevision,instanceId}`, `shop/continue`에 `{expectedRevision}`를 보낸다. 점수·코인·가격·시드는 보내지 않는다. 전체 경로는 [API 계약](07-API_DATA_MODEL.md)에 있다.
+생성 응답은 `{state,upgrades}`, 액션은 `{state,event,upgrades}`다. `state.revision`을 다음 요청에 사용한다. 새 런은 3코인으로 시작하며 목표 달성 스핀에서 자동 정산한다. `shop/purchases`에 `{expectedRevision,slotId}`, `shop/rerolls`에 `{expectedRevision}`, `shop/discards`에 `{expectedRevision,instanceId}`, `shop/continue`에 `{expectedRevision}`를 보낸다. 점수·코인·가격·시드는 보내지 않는다. 전체 경로는 [API 계약](07-API_DATA_MODEL.md)에 있다.
 
 ## 브라우저 조작
-- 새 런(2코인) → 스핀 → 목표 달성 시 자동 정산·상점 → 다음 라운드. 모든 선택 결과는 서버 응답을 따른다.
+- 새 런(3코인) → 스핀 → 목표 달성 시 자동 정산·상점 → 다음 라운드. 모든 선택 결과는 서버 응답을 따른다.
 - 아이템 카드를 눌러 설명을 보고, 상점에서 보유 아이템을 눌러 폐기할 수 있다. 제한 아이템은 남은 Hand/발동 횟수를 표시한다.
 - 지난 런에서 저장된 런을 다시 연다. 응답을 받지 못한 선택은 ‘결과 확인’으로 원래 요청을 재전송한다. 새로고침도 같은 키를 보존한다.
 - 점수를 누르면 축약 전 전체 정수를 확인한다. 설정에서 효과음·빠른 연출·모션 줄이기를 선택한다. 입력창/대화상자 외의 Space로 스핀할 수 있다.
@@ -69,3 +69,18 @@ npm run account:revoke -- player-one
 
 ## 확인
 `npm run check`는 기존 게임 규칙과 함께 실제 로컬 HTTP, 파일 저장/재시작, 동시 연결, 저장 실패 롤백, 정확한 랭킹 비교를 검사한다. 테스트가 로컬 포트를 열 수 있는 실행 환경이 필요하다. 실패/승리 완료 시 서버가 랭킹을 자동 갱신하며 클라이언트 점수 제출 경로는 없다.
+
+## 지인용 임시 공유
+Cloudflare 공식 `cloudflared` 실행 파일로 별도 공유 서버를 연결한다. 기존 `--local-play` 서버를 외부로 연결하지 않는다.
+
+```sh
+cloudflared tunnel --url http://127.0.0.1:3006
+# 위 명령이 출력한 실제 HTTPS 주소를 그대로 지정해 다른 터미널에서 실행
+NINE_SHARE_ORIGIN=https://<발급된-주소>.trycloudflare.com npm run play:shared
+```
+
+공유 서버는 127.0.0.1:3006과 `.runtime/shared-play`만 사용한다. 이 컴퓨터와 두 프로세스가 실행 중이어야 접속할 수 있고 터널 재시작마다 주소가 바뀐다. 링크를 아는 사람은 접속할 수 있다. 브라우저별 게스트 기록과 공유용 랭킹을 사용하며 원래 개인 기록과 분리된다. 쿠키를 지우거나 주소가 바뀌면 이전 게스트로 자동 복구되지 않는다.
+
+`POST /api/game/v1/guest-session`은 지정 HTTPS Origin·Host와 loopback 프록시 연결에서만 동작한다. 빈 JSON만 받으며 서버가 계정을 생성한다. 쿠키는 HttpOnly/Secure/SameSite=Strict이고 API 경로에만 전달한다. 신규 게스트는 분당32개, 프록시 전체 API는 분당480회, 계정별 API는 분당120회까지로 소규모 테스트를 제한한다. 임의 전달 헤더는 인증/요청 제한의 근거로 사용하지 않는다. 일반 서버의 게스트 기능은 비활성이다.
+
+[Cloudflare Quick Tunnels 공식 안내](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)에 따라 가동 보장과 고정 주소가 없는 개발용 공유다. 상시 서비스는 별도 배포가 필요하다.

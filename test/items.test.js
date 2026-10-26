@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { createInventory, acquireItem, discardItem, inventoryUsage, validateItems } from '../src/domain/inventory.js';
 import { weightedSymbols, scoreWithItems } from '../src/domain/item-scoring.js';
 import { candidateLines, spinWithItems } from '../src/domain/items.js';
-import { rules, rawRules, noLineBoard, cherryBoard, sevenBoard, scriptedRandom } from './helpers.js';
+import { rawV09Rules as rawRules, noLineBoard, cherryBoard, sevenBoard, scriptedRandom } from './helpers.js';
 import { parseRules } from '../src/domain/rules.js';
+const rules = parseRules(rawRules());
 
 export function buildItems(ids, config = rules, activeFromRound = 1) {
   return ids.reduce((inventory, id) => acquireItem(inventory, id, config, { activeFromRound }), createInventory());
@@ -58,16 +59,16 @@ test('candidate tuples match the documented three lines, in data order', () => {
   assert.deepEqual(candidateLines(cherryBoard, rules), []);
 });
 
-test('each miracle candidate has a selectable slot and 800 is the exclusive trigger boundary', () => {
+test('each miracle candidate has a selectable slot and 1600 is the exclusive trigger boundary', () => {
   const candidates = candidateLines(candidatesBoard, rules);
   for (let index = 0; index < candidates.length; index++) {
-    const result = play(candidatesBoard, ['miracle_hand'], [799, index]);
+    const result = play(candidatesBoard, ['miracle_hand'], [1599, index]);
     assert.equal(result.board[candidates[index].changeIndex], candidates[index].newSymbol);
     assert.equal(result.triggeredItems[0].lineId, candidates[index].lineId);
     assert.equal(result.itemsAfterSpin[0].remainingCharges, 1);
     assert.equal(result.draws, 11);
   }
-  const missed = play(candidatesBoard, ['miracle_hand'], [800]);
+  const missed = play(candidatesBoard, ['miracle_hand'], [1600]);
   assert.deepEqual(missed.board, candidatesBoard);
   assert.equal(missed.itemsAfterSpin[0].remainingCharges, 2);
   assert.equal(missed.draws, 10);
@@ -113,7 +114,7 @@ test('lever rerolls exactly the last column using modified weights; at most one 
 });
 
 test('failed earlier modifier falls through; same-group order is acquisition order', () => {
-  assert.equal(play(candidatesBoard, ['miracle_hand', 'broken_lever'], [3000, 0, 0]).triggeredItems[0].itemId, 'miracle_hand');
+  assert.equal(play(candidatesBoard, ['miracle_hand', 'broken_lever'], [6000, 0, 0]).triggeredItems[0].itemId, 'miracle_hand');
   assert.equal(play(candidatesBoard, ['magnet_device', 'miracle_hand'], [0, 0]).triggeredItems[0].itemId, 'magnet_device');
   assert.equal(play(candidatesBoard, ['miracle_hand', 'magnet_device'], [0, 0]).triggeredItems[0].itemId, 'miracle_hand');
 });
@@ -165,11 +166,11 @@ test('all per-line factors multiply before one floor; global product floors only
 });
 
 test('calculated miracle maximizes exact final delta with no selection RNG', () => {
-  const result = play(candidatesBoard, ['calculated_miracle'], [499]);
+  const result = play(candidatesBoard, ['calculated_miracle'], [999]);
   assert.equal(result.triggeredItems[0].lineId, 'diag_anti');
   assert.equal(result.draws, 10);
   assert.deepEqual(result.itemsAfterSpin, []);
-  assert.equal(play(candidatesBoard, ['calculated_miracle'], [500]).itemsAfterSpin[0].remainingCharges, 1);
+  assert.equal(play(candidatesBoard, ['calculated_miracle'], [1000]).itemsAfterSpin[0].remainingCharges, 1);
 });
 
 test('calculated miracle skips nonpositive candidates after real-line special scoring', () => {

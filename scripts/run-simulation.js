@@ -23,6 +23,7 @@ export function simulateRuns(rules, { trials = 10000, seed = 'nine-phase5-v1', s
       }
       let action;
       if (state.phase === 'ROUND_ACTIVE') action = { type: canClaim(state) ? 'CLAIM' : 'SPIN' };
+      else if (state.phase === 'CARD_CHOICE') action = { type:'CHOOSE_CARD', slotId:state.cardOffer[0].slotId };
       else {
         const shop = getShopView(state, rules);
         // Fixed policy: affordable non-economy first, then cheaper, then stable ID.

@@ -40,18 +40,20 @@ export function validateBoard(board, rules) {
   }
 }
 
-function winningLines(board, rules, wildCenter = false) {
+function winningLines(board, rules, wildMarks = []) {
   return rules.lines.flatMap(({ id, indices }) => {
-    const matchedIndices = wildCenter ? indices.filter((index) => index !== 4) : indices;
+    const matchedIndices = indices.filter((index) => !wildMarks.includes(index));
+    if (!matchedIndices.length) return [];
     const symbol = board[matchedIndices[0]];
     return matchedIndices.every((index) => board[index] === symbol)
       ? [{ lineId: id, symbol, score: rules.symbolsById[symbol].linePayout }] : [];
   });
 }
 
-export function evaluateLines(board, rules, { wildCenter = false } = {}) {
+export function evaluateLines(board, rules, { wildCenter = false, wildMarks = [] } = {}) {
   validateBoard(board, rules);
-  return winningLines(board, rules, wildCenter);
+  requireCondition(Array.isArray(wildMarks) && wildMarks.every((i) => Number.isInteger(i) && i >= 0 && i <= 8) && new Set(wildMarks).size === wildMarks.length, 'INVALID_WILD_MARKS');
+  return winningLines(board, rules, wildCenter ? [...new Set([...wildMarks, 4])] : wildMarks);
 }
 
 export function scoreBoard(board, rules) {

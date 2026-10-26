@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isSelected8 } from '../src/domain/selected8-contract.js';
 
 export const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
 
@@ -45,6 +46,11 @@ export function checkDocumentation(rules, documents) {
 
   const decisions = rows(doc('docs/10-DECISIONS.md')).map((row) => row.map(clean));
   const { round, economy, shop } = rules.balance;
+  if (round.milestoneCards) {
+    const cardText = doc('docs/18-MILESTONE_CARDS.md');
+    assert.ok(cardText.includes(`${round.milestoneCards.afterRound}라운드 성공`), 'card unlock round drift');
+    for (const card of round.milestoneCards.cards) assert.ok(cardText.includes(`| ${card.id} | ${card.nameKo} |`), 'card definition drift');
+  }
   assert.ok(core.includes(`handsRemaining=${round.baseHands}`), 'Hand count documentation drift');
   const decisionValues = {
     '기본 Hand': `${round.baseHands}회`, '초기 Coin': `${economy.startingCoins}`, '클리어 기본': `${economy.baseClearReward}`,
@@ -62,9 +68,26 @@ export function checkDocumentation(rules, documents) {
   for (const item of rules.catalog.items) {
     const { effect } = item;
     const path = `${item.id} documentation`;
+    if (effect.basePointAdd !== undefined) {
+      const name = { cherry: '체리', lemon: '레몬', bell: '종', diamond: '다이아', seven: '세븐' }[effect.symbol];
+      assert.ok(itemText.includes(`${name} +${effect.basePointAdd}`), `${path}: base point drift`);
+    }
+    if (isSelected8(item)) {
+      const row = rows(doc('docs/17-SELECTED8.md')).map((r) => r.map(clean)).find((r) => r[0] === item.id);
+      assert.ok(row, `${path}: missing selected row`);
+      assert.equal(row[1], item.nameKo, `${path}: selected name drift`);
+      assert.equal(row[3], String(item.price), `${path}: selected price drift`);
+      assert.equal(row[4], `${item.slot === 'charged' ? `충전${item.initialCharges}` : '영구'}/${item.maxStacks}`, `${path}: selected lifetime drift`);
+      if (effect.triggerChanceBasisPoints) assert.ok(row[2].includes(`${effect.triggerChanceBasisPoints / 100}%`), `${path}: selected chance drift`);
+      continue;
+    }
     if (effect.kind === 'weight_add') {
       assert.ok(itemText.includes(`\`${item.nameKo}\`: +${effect.amount}(${item.price}코인, 최대 ${item.maxStacks})`), `${path}: weight/price/stack drift`);
       if (item.minShopRound) assert.ok(itemText.includes(`${item.minShopRound}라운드 종료 상점부터`), `${path}: shop unlock drift`);
+      if (effect.basePointAdd !== undefined) {
+        const name = { cherry: '체리', lemon: '레몬', bell: '종', diamond: '다이아', seven: '세븐' }[effect.symbol];
+        assert.ok(itemText.includes(`${name} +${effect.basePointAdd}`), `${path}: base point drift`);
+      }
     } else if (effect.kind === 'symbol_line_add_factor') {
       const percent = Number(effect.extraFactor.num) / Number(effect.extraFactor.den) * 100;
       assert.ok(itemText.includes(`\`${item.nameKo}\`: 추가 +${percent}%(${item.price}코인,`), `${path}: factor/price drift`);
@@ -77,6 +100,10 @@ export function checkDocumentation(rules, documents) {
         assert.ok(row[1].includes(`Hand +${effect.amount}, 최대 ${item.maxStacks}개 중첩`), `${path}: Hand effect drift`);
         assert.ok(itemText.includes(`round.maxExtraHands=${round.maxExtraHands}`), `${path}: Hand cap drift`);
       }
+      if (effect.kind === 'square_match_bonus') {
+        assert.ok(row[1].includes(`${Number(effect.payoutFactor.num) / Number(effect.payoutFactor.den) * 100}%`), `${path}: square payout drift`);
+        for (const square of rules.squares) assert.ok(itemText.includes(square.indices.join(',')), `${path}: square geometry drift`);
+      }
       if (effect.triggerChanceBasisPoints !== undefined) {
         assert.match(row.join(' '), new RegExp(`(?:^|[^0-9])${effect.triggerChanceBasisPoints / 100}%`), `${path}: chance drift`);
       }
@@ -88,7 +115,7 @@ export function checkDocumentation(rules, documents) {
   assert.ok(economyText.includes(`첫 라운드 시작 시 ${economy.startingCoins}코인`), 'starting coins documentation drift');
   if (round.autoClearOnTarget) assert.ok(core.includes('**자동 정산**'), 'automatic settlement documentation drift');
   const economyRows = rows(economyText).map((row) => row.map(clean));
-  for (const item of rules.catalog.items.filter((item) => item.category === 'economy')) {
+  for (const item of rules.catalog.items.filter((item) => item.category === 'economy' && !isSelected8(item))) {
     const row = economyRows.find((cells) => cells[0] === `${item.id} ${item.nameKo}`);
     assert.ok(row, `${item.id}: missing economy row`);
     assert.equal(Number(row[2]), item.price, `${item.id}: price drift`);

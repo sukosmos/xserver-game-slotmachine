@@ -1,5 +1,5 @@
 {
-  "version": "v0.8",
+  "version": "v0.11",
   "lines": [
     {
       "id": "row_top",
@@ -63,6 +63,44 @@
         2,
         4,
         6
+      ]
+    }
+  ],
+  "squares": [
+    {
+      "id": "square_top_left",
+      "indices": [
+        0,
+        1,
+        4,
+        3
+      ]
+    },
+    {
+      "id": "square_top_right",
+      "indices": [
+        1,
+        2,
+        5,
+        4
+      ]
+    },
+    {
+      "id": "square_bottom_left",
+      "indices": [
+        3,
+        4,
+        7,
+        6
+      ]
+    },
+    {
+      "id": "square_bottom_right",
+      "indices": [
+        4,
+        5,
+        8,
+        7
       ]
     }
   ]

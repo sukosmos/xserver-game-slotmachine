@@ -22,6 +22,32 @@ function fixture(t, config = rules) {
   return { options, open, store: open() };
 }
 const cmd = (type, revision, extra = {}) => ({ type, expectedRevision: revision, idempotencyKey: `action-${revision}`, ...extra });
+
+test('R3 hidden cards and chosen reward survive disk restart and simultaneous connections', (t) => {
+  const raw = structuredClone({ balance:currentRules.balance, lines:currentRules.lineDefinitions, catalog:currentRules.catalog });
+  raw.balance.round.roundTargets.forEach((row) => { row.targetScore='1'; });
+  const { store, open }=fixture(t,parseRules(raw));
+  let active=store, result=active.createRun('alice','cards'), id=result.state.runId;
+  const act=(type,extra={}) => result=active.execute('alice',id,cmd(type,result.state.revision,extra));
+  for(let round=1;round<=3;round++) { act('SPIN'); if(round<3) act('CONTINUE'); }
+  const pending=structuredClone(result);
+  active.close(); active=open();
+  assert.deepEqual(active.getRun('alice',id).state,pending.state);
+  const command=cmd('CHOOSE_CARD',result.state.revision,{slotId:result.state.cardChoice.slots[1].slotId});
+  result=active.execute('alice',id,command);
+  const other=open();
+  assert.deepEqual(other.execute('alice',id,command),result);
+  assert.throws(()=>other.execute('alice',id,{...command,idempotencyKey:'race'}),{code:'STALE_REVISION'});
+  active.close(); active=open();
+  assert.deepEqual(active.getRun('alice',id).state,result.state);
+  assert.equal(result.state.coins,pending.state.coins);
+  act('CONTINUE'); const started=structuredClone(result.state);
+  act('SPIN'); const first=structuredClone(result);
+  active.close(); active=open();
+  assert.deepEqual(active.getRun('alice',id).state,first.state);
+  if(started.milestoneReward.cardId==='wild') assert.equal(first.event.milestoneWild,true);
+  assert.equal(first.state.phase,'SHOP');
+});
 function losingRules() {
   const raw = rawRules(); raw.balance.round.roundTargets[0].targetScore = '9999999999999999999999999999';
   return parseRules(raw);
@@ -219,4 +245,48 @@ test('leaderboard SQL preserves exact ordering, one best per account and earlier
   assert.equal(store.leaderboard().entries[0].runId, better.runId);
   assert.equal(store.leaderboard().entries.length, 2);
   assert.equal(store.leaderboard(1).entries.length, 1);
+});
+
+test('selected8 receipt refunds and emergency Hands commit once across connections and disk restart', (t) => {
+  const raw = structuredClone({ balance: currentRules.balance, lines: currentRules.lineDefinitions, catalog: currentRules.catalog });
+  raw.balance.economy.startingCoins = 50;
+  delete raw.balance.round.milestoneCards; // Isolate the selected-eight persistence fixture.
+  raw.balance.round.roundTargets[0].targetScore = '1'; raw.balance.round.roundTargets[1].targetScore = '1';
+  raw.balance.round.roundTargets[2].targetScore = '999999999';
+  raw.balance.symbols[0].weight = 100000;
+  raw.catalog.items = raw.catalog.items.filter((i) => ['receipt_collector', 'seven_tracker', 'emergency_lever', 'golden_harvest'].includes(i.id));
+  const { store, open } = fixture(t, parseRules(raw));
+  let active = store, result = active.createRun('alice', 'selected-eight'), id = result.state.runId;
+  const act = (type, extra = {}) => { result = active.execute('alice', id, cmd(type, result.state.revision, extra)); return result; };
+  const purchase = (itemId) => act('BUY', { slotId: result.state.shop.slots.find((s) => s.itemId === itemId).slotId });
+  act('SPIN');
+  for (const item of ['receipt_collector', 'seven_tracker', 'emergency_lever']) purchase(item);
+  assert.equal(result.state.items.find((i) => i.itemId === 'receipt_collector').purchaseCounter, 0);
+  act('CONTINUE'); act('SPIN');
+  purchase('golden_harvest'); act('REROLL'); purchase('golden_harvest');
+  const saved = structuredClone(result.state);
+  active.close(); active = open();
+  assert.deepEqual(active.getRun('alice', id).state, saved);
+  assert.equal(saved.items.find((i) => i.itemId === 'receipt_collector').purchaseCounter, 2);
+  act('REROLL');
+  const buy = cmd('BUY', result.state.revision, { slotId: result.state.shop.slots.find((s) => s.itemId === 'golden_harvest').slotId });
+  result = active.execute('alice', id, buy);
+  assert.equal(result.event.refundCoins, 1);
+  assert.equal(result.state.items.find((i) => i.itemId === 'receipt_collector').purchaseCounter, 0);
+  const other = open();
+  assert.deepEqual(other.execute('alice', id, buy), result);
+  assert.throws(() => other.execute('alice', id, { ...buy, idempotencyKey: 'race-buy' }), { code: 'STALE_REVISION' });
+  act('CONTINUE');
+  for (let i = 0; i < 4; i++) act('SPIN');
+  const emergencyCommand = cmd('SPIN', result.state.revision);
+  result = active.execute('alice', id, emergencyCommand);
+  assert.equal(result.event.emergency.type, 'EMERGENCY_HAND_GRANTED');
+  assert.equal(result.state.handsRemaining, 1); assert.equal(result.state.phase, 'ROUND_ACTIVE');
+  assert.deepEqual(active.leaderboard().entries, []);
+  active.close(); active = open();
+  assert.deepEqual(active.execute('alice', id, emergencyCommand), result);
+  act('SPIN');
+  assert.equal(result.state.phase, 'RUN_FAILED');
+  assert.deepEqual(result.state.pendingNextHandWeightBuffs, []);
+  assert.equal(active.leaderboard().entries.length, 1);
 });
