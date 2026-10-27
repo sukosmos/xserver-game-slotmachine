@@ -1,10 +1,10 @@
 # NINE TO RUN
 슬롯 머신 로그라이크 게임
 
-
+```
 npm run play           # http://127.0.0.1:3000 로컬 게임 화면
 npm run play:shared    # NINE_SHARE_ORIGIN 지정 시 별도 저장소의 임시 게스트 공유 서버
-
+```
 
 # To. Claude
 
