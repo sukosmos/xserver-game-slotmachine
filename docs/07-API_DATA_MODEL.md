@@ -1,5 +1,12 @@
 # 07. API 및 데이터 모델 계약 초안
 
+## v0.13 Endless 확장
+- 새 규칙의 공개 상태에 `mode:standard|endless`, `canStartEndless:boolean`을 추가한다. 시작 가능 여부는 서버가 판정한다.
+- `POST /api/game/v1/runs/:id/endless/start`는 `{expectedRevision}`과 Idempotency-Key만 받으며 내부 명령은 `START_ENDLESS`다. 임의 목표·모드·점수·아이템은 거절한다.
+- 표준 R10 `RUN_WON`에서만 가능하다. 자산을 보존한 `SHOP`, `mode:endless`, `ENDLESS_STARTED` 이벤트를 반환한다. 추가 정산은 없다. 같은 키는 원래 응답, 다른 동시 요청은 revision 충돌이다.
+- 다음 `CONTINUE`부터 R11 이상의 목표를 JSON 비율로 서버에서 정확히 계산한다. Endless 성공은 계속 `SHOP`으로 이동한다. 구버전은 확장을 허용하지 않고 기존 응답 형태를 유지한다.
+- R10 승리 시 랭킹을 저장한다. Endless 진입하면 런의 `endedAt`은 null로 돌아가고 기존 최고 기록은 유지하며, 실패 시 최종 기록을 비교하여 갱신한다.
+
 ## v0.12 아이템·카드 확장
 - 카탈로그의 `maxStacks:null`은 중첩 무제한이다. 가중치 아이템은 `maxStacks:5`이며 슬롯은 같은 ID끼리 공유한다.
 - 소모 아이템의 `lastTriggeredRound`는 마지막으로 실제 발동한 라운드(미사용0)다. 서버는 같은 라운드의 중복 발동을 막고 남은 Hand 기준 확률을 계산한다.

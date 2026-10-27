@@ -7,6 +7,7 @@ const client = new GameClient();
 let catalog, run = null, lastSpin = null, lastEvent = null, busy = true, tab = 'play', ranks = [], recent = [], shownBoard = null;
 let playerId, audioContext, upgrades = null, upgradeMode = null;
 let motion = null, presentation = null, cardReveal = null;
+const celebratedRuns = new Set();
 const rarity = { common: '일반', rare: '희귀', epic: '영웅', legendary: '전설' };
 const reasons = { INSUFFICIENT_COINS: '코인 부족', INVENTORY_FULL: '아이템 칸 부족', ITEM_CAP_REACHED: '최대 중첩', SOLD_OUT: '품절', EMPTY_SHOP_SLOT: '상품 없음' };
 const errors = { CONNECTION_LOST: '연결이 끊겼어요. 결과 확인을 눌러 안전하게 이어가세요.', PENDING_ACTION: '이전 선택의 결과를 먼저 확인해주세요.',
@@ -45,11 +46,17 @@ function render() {
   $('#main').setAttribute('aria-busy', String(busy));
   const gauge = $('#goal-fill'); if (gauge) gauge.style.width = `${run ? progress(motion?.score ?? run.roundScore, run.targetScore) : 0}%`;
   if (active?.action) [...document.querySelectorAll('[data-action]')].find((el) => el.dataset.action === active.action && el.dataset.value === active.value && !el.disabled)?.focus({ preventScroll: true });
+  const victory = $('#victory');
+  if (!run?.canStartEndless && victory.open) victory.close();
+  if (tab === 'play' && run?.canStartEndless && !blocked() && !celebratedRuns.has(run.runId) && !document.querySelector('dialog[open]')) {
+    $('#victory-message').textContent = `${catalog.maxRounds} 라운드를 깨셨네요!`;
+    celebratedRuns.add(run.runId); victory.showModal();
+  }
 }
 function renderPlay() {
   const phase = run?.phase;
   const status = !run ? '준비' : phase === 'SHOP' ? '정산 완료' : phase === 'RUN_WON' ? '전체 클리어' : phase === 'RUN_FAILED' ? '종료' : '';
-  return `<section class="run-toolbar"><div class="run-title"><h1>라운드 ${run?.roundIndex ?? 1}<small> / ${catalog.maxRounds}</small></h1>${status ? `<span class="phase-badge">${status}</span>` : ''}</div><div class="run-meta"><span>누적 ${number(run?.runTotalScore ?? '0')}</span><span class="coin-balance">${icon('coin')} ${run?.coins ?? catalog.startingCoins}</span></div><div class="run-tools">${run || recent.length ? button('지난 런', 'history', { disabled: busy, className: 'text-button' }) : ''}${button('새 런', 'new', { disabled: blocked(), className: 'text-button' })}</div></section>
+  return `<section class="run-toolbar"><div class="run-title"><h1>라운드 ${run?.roundIndex ?? 1}<small>${run?.mode === 'endless' ? ' · ENDLESS' : ` / ${catalog.maxRounds}`}</small></h1>${status ? `<span class="phase-badge">${status}</span>` : ''}</div><div class="run-meta"><span>누적 ${number(run?.runTotalScore ?? '0')}</span><span class="coin-balance">${icon('coin')} ${run?.coins ?? catalog.startingCoins}</span></div><div class="run-tools">${run || recent.length ? button('지난 런', 'history', { disabled: busy, className: 'text-button' }) : ''}${button('새 런', 'new', { disabled: blocked(), className: 'text-button' })}</div></section>
   ${client.pending() ? `<div class="recovery"><span>처리 결과 확인 필요</span>${button('결과 확인', 'retry', { disabled: busy, className: 'primary' })}</div>` : ''}
   <div class="play-layout"><div class="game-column">${!motion && (phase === 'CARD_CHOICE' || cardReveal) ? renderCardScene() : phase === 'SHOP' && !motion ? renderShopScene() : renderMachine()}${phase === 'CARD_CHOICE' || cardReveal ? '' : renderBreakdown()}</div><aside class="build-column">${renderBlessing()}${renderUpgrades()}${renderInventory()}</aside></div>`;
 }
@@ -75,14 +82,14 @@ function renderMachine() {
   <div class="machine-interior">${renderBoard()}<button class="lever" data-action="spin" aria-label="손잡이 당기기" title="손잡이 당기기 · Space" ${blocked() || !run || ended() ? 'disabled' : ''}><span class="lever-socket"></span><span class="lever-arm"><span class="lever-knob"></span></span><span class="lever-label">${rolling ? '회전 중' : 'PULL'}</span></button></div>
   <div class="spin-caption">${rolling ? '<span>회전 중</span>' : award ? `<span>${esc(award.label)}</span><strong>+${compactScore(award.score)}<small>점</small></strong>` : lastSpin ? `<span>${awardSummary(lastSpin)}</span><strong>+${compactScore(lastSpin.spinScore)}<small>점</small></strong>` : '<span>3×3 · 8라인</span>'}</div>
   <div class="effect-cues" aria-live="polite">${(motion?.effects ?? []).map((effect) => `<div class="effect-cue"><span>${esc(effect.name)}</span><strong>${esc(effect.label)}</strong></div>`).join('')}${motion?.stage === 'score' && presentation?.expired.length ? `<small class="expiry-cue">${esc(presentation.expired.map((item) => item.name).join(', '))} · 사용 완료</small>` : ''}</div>
-  ${!run || ended() ? `<div class="action-row">${button(run ? '다시 시작' : '시작', 'start', { disabled: blocked(), className: 'primary spin-button' })}</div>` : ''}${ended() ? `<p class="machine-note">${run.completedRounds}라운드 완료 · 기록 저장됨</p>` : ''}
+  ${!run || ended() ? `<div class="action-row">${run?.canStartEndless ? button('Endless Mode 시작 →', 'start-endless', { disabled: blocked(), className: 'primary spin-button' }) : button(run ? '다시 시작' : '시작', 'start', { disabled: blocked(), className: 'primary spin-button' })}</div>` : ''}${ended() ? `<p class="machine-note">${run.completedRounds}라운드 완료 · 기록 저장됨</p>` : ''}
   ${motion?.stage === 'clear' ? `<div class="round-clear" role="status"><span class="clear-mark">✓</span><strong>ROUND CLEAR</strong><span>라운드 ${run.roundIndex}</span><b>${icon('coin')} +${motion.reward}</b></div>` : ''}${motion?.stage === 'emergency' ? `<div class="round-clear emergency-clear" role="status"><span>비상 레버</span><strong>${motion.roundCleared ? 'ROUND SAVED' : `EXTRA HAND +${motion.handsGranted}`}</strong></div>` : ''}</section>`;
 }
 function awardSummary(spin) {
   return `${spin.winningLines.length}라인${spin.winningPatterns?.length ? ` · 패턴 ${spin.winningPatterns.length}` : ''}`;
 }
 function renderShopScene() {
-  return `<section class="machine shop-scene" id="scene" tabindex="-1" aria-label="상점">${renderShop()}${upgrades?.next?.hands > catalog.baseHands ? `<p class="next-hands">다음 라운드 ${upgrades.next.hands} Hand</p>` : ''}<div class="action-row">${button('다음 라운드', 'continue', { disabled: blocked(), className: 'primary spin-button' })}</div></section>`;
+  return `<section class="machine shop-scene" id="scene" tabindex="-1" aria-label="상점">${renderShop()}${upgrades?.next?.hands > catalog.baseHands ? `<p class="next-hands">다음 라운드 ${upgrades.next.hands} Hand</p>` : ''}<div class="action-row">${button(run.mode === 'endless' && run.roundIndex === catalog.maxRounds ? `${run.roundIndex + 1}라운드 시작` : '다음 라운드', 'continue', { disabled: blocked(), className: 'primary spin-button' })}</div></section>`;
 }
 function statChange(base, value, percent = false) {
   const trimPercent = (text) => text.replace(/\.00%$/, '%').replace(/(\.\d)0%$/, '$1%');
@@ -96,7 +103,7 @@ function selectedBuild() {
 function renderUpgrades() {
   const view = upgrades ?? catalog.upgrades, selected = selectedBuild();
   const future = selected === view.next;
-  return `<section class="upgrades" aria-label="심벌 강화"><div class="section-title"><h2>심벌 강화</h2>${view.next ? `<div class="upgrade-tabs" role="group" aria-label="적용 라운드"><button data-action="upgrade-mode" data-value="current" aria-pressed="${!future}">현재</button><button data-action="upgrade-mode" data-value="next" aria-pressed="${future}">다음 R${view.next.roundIndex}</button></div>` : `<small>${ended() ? run.milestoneReward ? '카드 적용' : '기본값' : '현재 적용'}</small>`}</div><table class="symbol-table"><caption>기본 → 적용${future ? ` · R${selected.roundIndex} 미리보기` : ''}</caption><thead><tr><th scope="col">심벌</th><th scope="col">1칸 점수</th><th scope="col">3개 배당</th><th scope="col">추첨 확률</th></tr></thead><tbody>${selected.symbols.map((row) => `<tr data-symbol="${row.id}"><th scope="row"><button data-action="symbol" data-value="${row.id}" aria-label="${esc(catalog.symbols.find((symbol) => symbol.id === row.id).name)} 강화 상세">${icon(row.id)}<span>${esc(catalog.symbols.find((symbol) => symbol.id === row.id).name)}</span></button></th><td>${statChange(row.basePoint, row.point)}</td><td>${statChange(row.baseLinePayout, row.linePayout)}</td><td>${statChange(row.baseProbability, row.probability, true)}</td></tr>`).join('')}</tbody></table>${selected.effects.length ? `<div class="other-effects"><h3>기타 효과</h3>${selected.effects.map((effect) => `<button class="effect-row" data-action="item" data-value="${effect.itemId}"><span>${esc(itemOf(effect.itemId).nameKo)}${effect.stacks > 1 ? ` ×${effect.stacks}` : ''}</span><small>${esc(itemOf(effect.itemId).summary)}</small></button>`).join('')}</div>` : ''}</section>`;
+  return `<section class="upgrades" aria-label="심벌 강화"><div class="section-title"><h2>심벌 강화</h2>${view.next ? `<div class="upgrade-tabs" role="group" aria-label="적용 라운드"><button data-action="upgrade-mode" data-value="current" aria-pressed="${!future}">현재</button><button data-action="upgrade-mode" data-value="next" aria-pressed="${future}">다음 R${view.next.roundIndex}</button></div>` : `<small>${ended() && !run.canStartEndless ? run.milestoneReward ? '카드 적용' : '기본값' : '현재 적용'}</small>`}</div><table class="symbol-table"><caption>기본 → 적용${future ? ` · R${selected.roundIndex} 미리보기` : ''}</caption><thead><tr><th scope="col">심벌</th><th scope="col">1칸 점수</th><th scope="col">3개 배당</th><th scope="col">추첨 확률</th></tr></thead><tbody>${selected.symbols.map((row) => `<tr data-symbol="${row.id}"><th scope="row"><button data-action="symbol" data-value="${row.id}" aria-label="${esc(catalog.symbols.find((symbol) => symbol.id === row.id).name)} 강화 상세">${icon(row.id)}<span>${esc(catalog.symbols.find((symbol) => symbol.id === row.id).name)}</span></button></th><td>${statChange(row.basePoint, row.point)}</td><td>${statChange(row.baseLinePayout, row.linePayout)}</td><td>${statChange(row.baseProbability, row.probability, true)}</td></tr>`).join('')}</tbody></table>${selected.effects.length ? `<div class="other-effects"><h3>기타 효과</h3>${selected.effects.map((effect) => `<button class="effect-row" data-action="item" data-value="${effect.itemId}"><span>${esc(itemOf(effect.itemId).nameKo)}${effect.stacks > 1 ? ` ×${effect.stacks}` : ''}</span><small>${esc(itemOf(effect.itemId).summary)}</small></button>`).join('')}</div>` : ''}</section>`;
 }
 function renderBreakdown() {
   if (!lastSpin) return '';
@@ -296,7 +303,7 @@ async function action(suffix, extra = {}, isNew = false) {
     if (error.status === 409 && !client.pending() && run) { try { await loadRun(run.runId); } catch {} }
   } finally {
     busy = false; shownBoard = null; motion = null; cardReveal = null; render();
-    if (run?.phase !== previousPhase) $('#scene')?.focus({ preventScroll: true });
+    if (run?.phase !== previousPhase && !document.querySelector('dialog[open]')) $('#scene')?.focus({ preventScroll: true });
   }
 }
 
@@ -324,6 +331,7 @@ document.addEventListener('click', async (event) => {
   const { action: name, value } = target.dataset;
   if (name === 'score') details(`<h2>전체 점수</h2><p class="exact-score">${exactScore(value)}점</p>`);
   if (name === 'spin') await action('spins');
+  if (name === 'start-endless') { $('#victory').close(); await action('endless/start'); }
   if (name === 'choose-card') await action('cards/choice', { slotId:value });
   if (name === 'continue') await action('shop/continue');
   if (name === 'buy') await action('shop/purchases', { slotId: value });

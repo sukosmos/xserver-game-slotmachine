@@ -5,6 +5,7 @@ import { serveStatic } from './static.js';
 
 const base = '/api/game/v1';
 const routes = new Map([
+  ['endless/start', 'START_ENDLESS'],
   ['cards/choice', 'CHOOSE_CARD'],
   ['spins', 'SPIN'], ['claim', 'CLAIM'], ['shop/purchases', 'BUY'],
   ['shop/rerolls', 'REROLL'], ['shop/discards', 'DISCARD'], ['shop/continue', 'CONTINUE'],

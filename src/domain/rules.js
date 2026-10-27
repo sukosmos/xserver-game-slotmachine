@@ -177,11 +177,18 @@ export function parseRules(input) {
   check(balance.symbols.reduce((sum, symbol) => sum + symbol.weight, 0) <= MAX_RANDOM_BOUND, 'balance.symbols', 'weight total exceeds RNG range');
 
   const round = balance.round;
-  keys(round, ['baseHands', 'maxRoundMvp', 'roundTargets', 'carryRoundScore', 'carryCoins', 'carryItems'], ['autoClearOnTarget', 'maxExtraHands', 'milestoneCards'], 'balance.round');
+  keys(round, ['baseHands', 'maxRoundMvp', 'roundTargets', 'carryRoundScore', 'carryCoins', 'carryItems'], ['autoClearOnTarget', 'maxExtraHands', 'milestoneCards', 'endless'], 'balance.round');
   if (Object.hasOwn(round, 'autoClearOnTarget')) literal(round.autoClearOnTarget, true, 'balance.round.autoClearOnTarget');
   integer(round.baseHands, 'balance.round.baseHands', 1);
   if (Object.hasOwn(round, 'maxExtraHands')) integer(round.maxExtraHands, 'balance.round.maxExtraHands', 0, Number.MAX_SAFE_INTEGER - round.baseHands);
   integer(round.maxRoundMvp, 'balance.round.maxRoundMvp', 1);
+  if (round.endless !== undefined) {
+    keys(round.endless, ['targetGrowth', 'targetRounding'], [], 'balance.round.endless');
+    fraction(round.endless.targetGrowth, 'balance.round.endless.targetGrowth');
+    check(exactInteger(round.endless.targetGrowth.num) > exactInteger(round.endless.targetGrowth.den), 'balance.round.endless.targetGrowth', 'target must increase');
+    literal(round.endless.targetRounding, 'ceil', 'balance.round.endless.targetRounding');
+    literal(round.autoClearOnTarget, true, 'balance.round.autoClearOnTarget');
+  }
   literal(round.carryRoundScore, false, 'balance.round.carryRoundScore');
   literal(round.carryCoins, true, 'balance.round.carryCoins');
   literal(round.carryItems, true, 'balance.round.carryItems');

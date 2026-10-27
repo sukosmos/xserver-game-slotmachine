@@ -21,6 +21,13 @@
   <main id="main" tabindex="-1"><div class="boot"><p>불러오는 중</p></div></main>
   <footer><span>NINE TO RUIN <span class="dot">·</span> SLOT ROGUELITE</span><span id="connection">연결 중</span></footer>
   <dialog id="details"><div id="detail-content"></div><form method="dialog"><button class="secondary">닫기</button></form></dialog>
+  <dialog id="victory" aria-labelledby="victory-title" aria-describedby="victory-message">
+    <span class="victory-emblem" aria-hidden="true">✦</span>
+    <h2 id="victory-title">축하합니다!</h2>
+    <p id="victory-message">10 라운드를 깨셨네요!</p>
+    <button class="primary" data-action="start-endless" autofocus>Endless Mode 시작 <span aria-hidden="true">→</span></button>
+    <form method="dialog"><button class="text-button">나중에</button></form>
+  </dialog>
   <dialog id="settings"><div class="dialog-heading"><h2>설정</h2></div><label class="setting"><span>효과음</span><input id="sound" type="checkbox"></label><label class="setting"><span>빠른 연출</span><input id="fast" type="checkbox"></label><label class="setting"><span>모션 줄이기</span><input id="reduced" type="checkbox"></label><form method="dialog"><button class="primary">설정 닫기</button></form></dialog>
   <dialog id="login"><h2>연결</h2><form id="login-form"><label for="play-key">플레이 키</label><input id="play-key" type="password" autocomplete="off" required placeholder="발급받은 플레이 키"><p id="login-error" role="alert"></p><button class="primary" type="submit">연결</button></form></dialog>
   <noscript>게임을 플레이하려면 브라우저의 JavaScript를 켜주세요.</noscript>

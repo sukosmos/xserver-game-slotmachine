@@ -9,7 +9,8 @@ export function calculateClearReward(state, rules, rng) {
   const coinsBefore = assertCoins(state.coins);
   requireCondition(Number.isSafeInteger(state.handsRemaining) && state.handsRemaining >= 0
     && state.handsRemaining <= (state.roundHands ?? rules.balance.round.baseHands), 'INVALID_HANDS');
-  requireCondition(Number.isSafeInteger(state.roundIndex) && state.roundIndex >= 1 && state.roundIndex <= rules.balance.round.maxRoundMvp, 'INVALID_ROUND');
+  requireCondition(Number.isSafeInteger(state.roundIndex) && state.roundIndex >= 1
+    && (state.roundIndex <= rules.balance.round.maxRoundMvp || (rules.balance.round.endless && state.mode === 'endless')), 'INVALID_ROUND');
   const active = activeItems(state.items, rules, state.roundIndex).filter((instance) => getItem(rules, instance.itemId).slot === 'permanent');
   const economy = rules.balance.economy;
   let itemBaseBonus = 0n;

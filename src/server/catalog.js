@@ -48,6 +48,7 @@ export function publicCatalog(rules) {
   return {
     upgrades: upgradeView(createRun(rules), rules),
     rulesVersion: rules.rulesVersion, maxRounds: rules.balance.round.maxRoundMvp, baseHands: rules.balance.round.baseHands, targets: rules.targets.map(String),
+    ...(rules.balance.round.endless ? { endless: rules.balance.round.endless } : {}),
     permanentSlots: rules.balance.shop.basePermanentItemSlots, limitedSlots: rules.balance.shop.baseLimitedItemSlots,
     startingCoins: rules.balance.economy.startingCoins,
     symbols: rules.symbols.map((s) => ({ id: s.id, name: names[s.id], basePoint: s.basePoint.toString(), linePayout: s.linePayout.toString() })),

@@ -7,11 +7,11 @@ import { roundHands } from './hands.js';
 import { hasSelected8, rescueHand } from './selected8.js';
 import { hasMilestone, createCardOffer, chooseMilestone, isWildReward } from './milestone.js';
 
-/** @typedef {{ type: 'SPIN' | 'CLAIM' | 'CONTINUE' | 'REROLL' } | { type: 'BUY', slotId: string } | { type: 'DISCARD', instanceId: string }} RunAction */
+/** @typedef {{ type: 'SPIN' | 'CLAIM' | 'CONTINUE' | 'REROLL' | 'START_ENDLESS' } | { type: 'BUY' | 'CHOOSE_CARD', slotId: string } | { type: 'DISCARD', instanceId: string }} RunAction */
 
 export function validateAction(action, code = 'INVALID_ACTION') {
   requireCondition(action !== null && typeof action === 'object' && !Array.isArray(action), code);
-  requireCondition(['SPIN', 'CLAIM', 'CONTINUE', 'BUY', 'REROLL', 'DISCARD', 'CHOOSE_CARD'].includes(action.type), code);
+  requireCondition(['SPIN', 'CLAIM', 'CONTINUE', 'BUY', 'REROLL', 'DISCARD', 'CHOOSE_CARD', 'START_ENDLESS'].includes(action.type), code);
   const fields = ['type'];
   if (['BUY', 'CHOOSE_CARD'].includes(action.type)) fields.push('slotId');
   if (action.type === 'DISCARD') fields.push('instanceId');
@@ -30,6 +30,7 @@ export function createRun(rules, { initialItemIds = [] } = {}) {
     phase: 'ROUND_ACTIVE', roundIndex: 1, completedRounds: 0,
     roundScore: 0n, runTotalScore: 0n, targetScore: rules.targets[0],
     handsRemaining: hands, revision: 0,
+    ...(rules.balance.round.endless ? { mode: 'standard' } : {}),
     ...(rules.balance.round.maxExtraHands !== undefined ? { roundHands: hands } : {}),
     ...(hasSelected8(rules) ? { handSequence: 0, pendingNextHandWeightBuffs: [] } : {}),
     ...(hasMilestone(rules) ? { cardOffer:null, milestoneReward:null, roundWildAvailable:false } : {}),
@@ -41,12 +42,28 @@ export function canClaim(state) {
   return state.phase === 'ROUND_ACTIVE' && state.roundScore >= state.targetScore;
 }
 
+export function canStartEndless(state, rules) {
+  return Boolean(rules.balance.round.endless && state.mode === 'standard' && state.phase === 'RUN_WON'
+    && state.roundIndex === rules.balance.round.maxRoundMvp && state.completedRounds === state.roundIndex);
+}
+
+function nextTarget(state, rules) {
+  const target = rules.targets[state.roundIndex];
+  if (target !== undefined) return target;
+  requireCondition(rules.balance.round.endless && state.mode === 'endless', 'INVALID_RUN_PHASE');
+  const { num, den } = rules.balance.round.endless.targetGrowth;
+  return (state.targetScore * BigInt(num) + BigInt(den) - 1n) / BigInt(den);
+}
+
 function completeRound(state, rules, rng) {
   const { settlement, randomTrace } = calculateClearReward(state, rules, rng);
   state.coins = settlement.coinsAfterReward;
   state.completedRounds = state.roundIndex;
-  state.phase = state.roundIndex === rules.balance.round.maxRoundMvp ? 'RUN_WON' : 'SHOP';
-  if (state.phase === 'RUN_WON') { state.items = []; state.coins = 0; state.shop = null; if (hasSelected8(rules)) state.pendingNextHandWeightBuffs = []; }
+  state.phase = state.roundIndex === rules.balance.round.maxRoundMvp && state.mode !== 'endless' ? 'RUN_WON' : 'SHOP';
+  if (state.phase === 'RUN_WON') {
+    state.shop = null;
+    if (!rules.balance.round.endless) { state.items = []; state.coins = 0; if (hasSelected8(rules)) state.pendingNextHandWeightBuffs = []; }
+  }
   else if (hasMilestone(rules) && state.roundIndex === rules.balance.round.milestoneCards.afterRound && !state.milestoneReward) {
     state.phase = 'CARD_CHOICE';
     state.shop = null;
@@ -117,11 +134,19 @@ export function applyAction(previous, action, rules, rng) {
     const cleared = completeRound(state, rules, rng);
     randomTrace = cleared.randomTrace;
     event = { type: 'ROUND_CLAIMED', unusedHands: state.handsRemaining, outcome: state.phase, settlement: cleared.settlement };
+  } else if (action.type === 'START_ENDLESS') {
+    requireCondition(canStartEndless(state, rules), 'INVALID_RUN_PHASE');
+    state.mode = 'endless';
+    state.phase = 'SHOP';
+    const offer = createShop(state, rules, rng);
+    state.shop = offer.shop; randomTrace = offer.randomTrace;
+    event = { type: 'ENDLESS_STARTED', roundIndex: state.roundIndex };
   } else if (action.type === 'CONTINUE') {
     requireCondition(state.phase === 'SHOP', 'INVALID_RUN_PHASE');
+    requireCondition(Number.isSafeInteger(state.roundIndex) && state.roundIndex < Number.MAX_SAFE_INTEGER, 'ROUND_EXHAUSTED');
+    state.targetScore = nextTarget(state, rules);
     state.roundIndex += 1;
     state.roundScore = 0n;
-    state.targetScore = rules.targets[state.roundIndex - 1];
     state.handsRemaining = roundHands(rules, state.items, state.roundIndex);
     if (rules.balance.round.maxExtraHands !== undefined) state.roundHands = state.handsRemaining;
     if (hasMilestone(rules)) state.roundWildAvailable = isWildReward(state, rules);

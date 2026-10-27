@@ -46,6 +46,10 @@ export function checkDocumentation(rules, documents) {
 
   const decisions = rows(doc('docs/10-DECISIONS.md')).map((row) => row.map(clean));
   const { round, economy, shop } = rules.balance;
+  if (round.endless) {
+    const percent = BigInt(round.endless.targetGrowth.num) * 100n / BigInt(round.endless.targetGrowth.den);
+    assert.ok(doc('docs/05-PROGRESSION_RANKING.md').includes(`직전 목표의${percent}%를 정수 올림`), 'endless target growth drift');
+  }
   if (round.milestoneCards) {
     const cardText = doc('docs/18-MILESTONE_CARDS.md');
     assert.ok(cardText.includes(`${round.milestoneCards.afterRound}라운드 성공`), 'card unlock round drift');

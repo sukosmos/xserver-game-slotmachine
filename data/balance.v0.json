@@ -1,5 +1,5 @@
 {
-  "version": "v0.12",
+  "version": "v0.13",
   "status": "prototype_values_not_final",
   "board": {
     "rows": 3,
@@ -140,6 +140,13 @@
         }
       ],
       "offerCount": 4
+    },
+    "endless": {
+      "targetGrowth": {
+        "num": 19,
+        "den": 10
+      },
+      "targetRounding": "ceil"
     }
   },
   "economy": {
