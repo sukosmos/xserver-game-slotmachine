@@ -340,3 +340,31 @@ test('upgrade responses track purchase preview, activation, discard and original
   const creation = (await call('/runs', { body: {}, key: 'upgrade-create' })).data;
   assert.equal(creation.upgrades.revision, 0); assert.equal(creation.upgrades.current.symbols[0].linePayout, '30');
 });
+
+test('Endless HTTP requires a won run and preserves opt-in, assets and idempotency across rounds', async t => {
+  const {call}=await setup(t,{},raw=>{
+    Object.assign(raw,currentRawRules());raw.balance.round.roundTargets.forEach(row=>{row.targetScore='1';});
+  });
+  let result=await call('/runs',{body:{},key:'endless-create'}),state=result.data.state;
+  const root=`/runs/${state.runId}`;
+  const act=async(suffix,extra={})=>{result=await call(`${root}/${suffix}`,{body:{expectedRevision:state.revision,...extra},key:`endless-act-${state.revision}`});assert.equal(result.status,200);state=result.data.state;return result;};
+  assert.equal((await call(`${root}/endless/start`,{body:{expectedRevision:0},key:'too-early'})).status,409);
+  for(let r=1;r<=10;r++){
+    await act('spins');
+    if(state.phase==='CARD_CHOICE')await act('cards/choice',{slotId:state.cardChoice.slots[0].slotId});
+    if(r<10)await act('shop/continue');
+  }
+  assert.equal(state.canStartEndless,true);assert.equal(state.mode,'standard');const coins=state.coins;
+  assert.equal((await call(`${root}/endless/start`,{body:{expectedRevision:state.revision,mode:'endless'},key:'forged'})).status,400);
+  assert.equal((await call(`${root}/endless/start`,{body:{expectedRevision:state.revision,targetScore:'1'},key:'forged-target'})).status,400);
+  const payload={body:{expectedRevision:state.revision},key:'endless-once'};
+  const entered=await call(`${root}/endless/start`,payload);assert.equal(entered.status,200);state=entered.data.state;
+  assert.equal(state.phase,'SHOP');assert.equal(state.mode,'endless');assert.equal(state.coins,coins);assert.equal(state.canStartEndless,false);
+  assert.deepEqual((await call(`${root}/endless/start`,payload)).data,entered.data);
+  assert.equal((await call(`${root}/endless/start`,{...payload,key:'racing'})).status,409);
+  await act('shop/continue');assert.equal(state.roundIndex,11);assert.equal(state.targetScore,'2');assert.equal(state.handsRemaining,5);
+  await act('spins');assert.equal(state.phase,'SHOP');assert.equal(state.completedRounds,11);
+  assert.deepEqual((await call(`${root}/endless/start`,payload)).data,entered.data);
+  assert.deepEqual((await call(root)).data.state,state);
+  assert.equal((await call('/leaderboard')).data.entries[0].completedRounds,10);
+});

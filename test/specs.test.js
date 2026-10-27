@@ -17,6 +17,7 @@ for (const [file, before, after] of [
   ['docs/04-ECONOMY_SHOP.md', 'min(2, floor(coinsBeforeSettlement / 5))', 'min(3, floor(coinsBeforeSettlement / 5))'],
   ['docs/04-ECONOMY_SHOP.md', '기본 클리어 보상 +1', '기본 클리어 보상 +2'],
   ['docs/04-ECONOMY_SHOP.md', '25% 확률로 +3코인', '25% 확률로 +4코인'],
+  ['docs/05-PROGRESSION_RANKING.md', '직전 목표의190%', '직전 목표의150%'],
 ]) {
   test(`spec checker detects drift: ${before}`, () => {
     const documents = readDocuments();

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { rules, rawRules, randomForBoard, noLineBoard, cherryBoard, seed } from './helpers.js';
+import { v012Rules as rules, rawV012Rules as rawRules, randomForBoard, noLineBoard, cherryBoard, seed } from './helpers.js';
 import { parseRules } from '../src/domain/rules.js';
 import { createRun, applyAction } from '../src/domain/run.js';
 import { spinWithItems } from '../src/domain/items.js';

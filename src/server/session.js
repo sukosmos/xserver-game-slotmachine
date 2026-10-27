@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
-import { createRun, applyAction, canClaim, validateAction } from '../domain/run.js';
+import { createRun, applyAction, canClaim, canStartEndless, validateAction } from '../domain/run.js';
 import { getShopView } from '../domain/shop.js';
 import { stringifyExact } from '../domain/exact.js';
 import { requireCondition } from '../domain/errors.js';
@@ -29,6 +29,7 @@ function publicState(runId, state, rules) {
     phase: state.phase, roundIndex: state.roundIndex, completedRounds: state.completedRounds,
     roundScore: state.roundScore, runTotalScore: state.runTotalScore, targetScore: state.targetScore,
     handsRemaining: state.handsRemaining, canClaim: canClaim(state), revision: state.revision,
+    ...(rules.balance.round.endless ? { mode: state.mode, canStartEndless: canStartEndless(state, rules) } : {}),
     ...(state.roundHands !== undefined ? { roundHands: state.roundHands } : {}),
     ...(state.handSequence !== undefined ? { handSequence: state.handSequence, pendingNextHandWeightBuffs: state.pendingNextHandWeightBuffs } : {}),
     ...(hasMilestone(rules) ? { cardChoice:state.phase === 'CARD_CHOICE' ? { slots:state.cardOffer.map(({ slotId }) => ({ slotId })) } : null,
