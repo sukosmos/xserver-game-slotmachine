@@ -8,6 +8,7 @@ import { GameSession, restoreSession, rulesFingerprint } from './session.js';
 import { createVault } from './vault.js';
 import { publicCatalog } from './catalog.js';
 import { upgradeView } from './upgrades.js';
+import { createRankSnapshot } from './rank-snapshot.js';
 import { spinPresentation } from './presentation.js';
 
 const terminal = (state) => ['RUN_FAILED', 'RUN_WON'].includes(state.phase);
@@ -42,7 +43,7 @@ export class GameStore {
       this.#db.exec('PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL;');
       this.#transaction(() => {
         const version = this.#db.prepare('PRAGMA user_version').get().user_version;
-        requireCondition(version === 0 || version === 1, 'UNSUPPORTED_STORAGE_VERSION');
+        requireCondition([0, 1, 2].includes(version), 'UNSUPPORTED_STORAGE_VERSION');
         this.#db.exec(`
           CREATE TABLE IF NOT EXISTS metadata (name TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
           CREATE TABLE IF NOT EXISTS rulesets (hash TEXT PRIMARY KEY, definition TEXT NOT NULL) STRICT;
@@ -61,8 +62,9 @@ export class GameStore {
             completed_rounds INTEGER NOT NULL, score TEXT NOT NULL,
             ended_at INTEGER NOT NULL, rules_version TEXT NOT NULL
           ) STRICT;
-          PRAGMA user_version = 1;
+
         `);
+        if (version < 2) this.#db.exec('ALTER TABLE leaderboard ADD COLUMN snapshot TEXT; PRAGMA user_version = 2;');
         const check = this.#db.prepare("SELECT value FROM metadata WHERE name = 'key-check'").get();
         if (check) {
           try { requireCondition(this.#vault.open(check.value, 'storage-key-v1') === 'nine-to-ruin', 'STORAGE_KEY_MISMATCH'); }
@@ -168,19 +170,20 @@ export class GameStore {
       const endedAt = terminal(next.finalState) ? time : null;
       this.#db.prepare('UPDATE runs SET audit = ?, updated_at = ?, ended_at = ? WHERE id = ?')
         .run(this.#vault.seal(next, context(row)), time, endedAt, runId);
-      if (endedAt !== null) this.#recordBest(userId, next.finalState, endedAt);
+      if (endedAt !== null) this.#recordBest(userId, next, rules, endedAt);
       return projected;
     });
   }
 
-  #recordBest(userId, state, endedAt) {
+  #recordBest(userId, audit, rules, endedAt) {
+    const state = audit.finalState;
     const previous = this.#db.prepare('SELECT * FROM leaderboard WHERE owner_id = ?').get(userId);
     const candidate = { completedRounds: state.completedRounds, runTotalScore: state.runTotalScore, endedAt };
     if (previous && compareRecords(candidate, recordOf(previous)) >= 0) return;
-    this.#db.prepare(`INSERT INTO leaderboard VALUES (?, ?, ?, ?, ?, ?)
+    this.#db.prepare(`INSERT INTO leaderboard (owner_id, run_id, completed_rounds, score, ended_at, rules_version, snapshot) VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(owner_id) DO UPDATE SET run_id=excluded.run_id, completed_rounds=excluded.completed_rounds,
-      score=excluded.score, ended_at=excluded.ended_at, rules_version=excluded.rules_version`)
-      .run(userId, state.runId, state.completedRounds, state.runTotalScore, endedAt, state.rulesVersion);
+      score=excluded.score, ended_at=excluded.ended_at, rules_version=excluded.rules_version, snapshot=excluded.snapshot`)
+      .run(userId, state.runId, state.completedRounds, state.runTotalScore, endedAt, state.rulesVersion, JSON.stringify(createRankSnapshot(audit, rules, state)));
   }
 
   playerId(userId) {
@@ -195,6 +198,22 @@ export class GameStore {
       length(score) DESC, score COLLATE BINARY DESC, ended_at ASC, run_id ASC LIMIT ?`).all(limit);
     return { entries: rows.map((row, index) => ({ rank: index + 1, playerId: this.playerId(row.owner_id), runId: row.run_id,
       completedRounds: row.completed_rounds, runTotalScore: row.score, endedAt: row.ended_at, rulesVersion: row.rules_version })) };
+  }
+
+  leaderboardDetail(runId) {
+    return this.#transaction(() => {
+      const row = this.#db.prepare('SELECT * FROM leaderboard WHERE run_id = ?').get(runId);
+      requireCondition(row !== undefined, 'RANK_NOT_FOUND');
+      let snapshot;
+      if (row.snapshot) snapshot = JSON.parse(row.snapshot);
+      else {
+        // Old records may point at a run that has since entered Endless. Select the ranked terminal revision.
+        const { audit, rules } = this.#load(row.owner_id, row.run_id);
+        snapshot = createRankSnapshot(audit, rules, recordOf(row));
+        this.#db.prepare('UPDATE leaderboard SET snapshot = ? WHERE run_id = ?').run(JSON.stringify(snapshot), runId);
+      }
+      return { runId: row.run_id, playerId: this.playerId(row.owner_id), snapshot };
+    });
   }
 
   issueToken(userId) {

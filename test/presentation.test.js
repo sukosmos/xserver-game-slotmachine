@@ -39,7 +39,7 @@ test('board and economic cues follow actual triggers without changing the resolv
   const config = parseRules(raw);
   const state = createRun(config, { initialItemIds: ['miracle_hand', 'piggy_bank', 'lucky_payday'] });
   const candidateBoard = ['cherry', 'cherry', 'diamond', 'bell', 'lemon', 'seven', 'diamond', 'bell', 'lemon'];
-  const { event } = applyAction(state, { type: 'SPIN' }, config, randomForBoard(candidateBoard, config, Array(12).fill(0)));
+  const { event } = applyAction(state, { type: 'SPIN' }, config, randomForBoard(candidateBoard, config, Array(14).fill(0)));
   const before = structuredClone(event), view = spinPresentation(event, config);
   assert.ok(event.rawBoard.some((symbol, index) => symbol !== event.board[index]));
   assert.equal(view.effects.find((e) => e.itemId === 'miracle_hand').label, '라인 완성');

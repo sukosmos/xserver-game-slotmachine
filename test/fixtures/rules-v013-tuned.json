@@ -1,0 +1,964 @@
+{
+  "balance": {
+    "version": "v0.13",
+    "status": "prototype_values_not_final",
+    "board": {
+      "rows": 3,
+      "cols": 3,
+      "paylines": 8
+    },
+    "symbols": [
+      {
+        "id": "cherry",
+        "display": "🍒",
+        "weight": 30,
+        "basePoint": 1,
+        "linePayout": 30
+      },
+      {
+        "id": "lemon",
+        "display": "🍋",
+        "weight": 25,
+        "basePoint": 2,
+        "linePayout": 60
+      },
+      {
+        "id": "bell",
+        "display": "🔔",
+        "weight": 20,
+        "basePoint": 3,
+        "linePayout": 120
+      },
+      {
+        "id": "diamond",
+        "display": "💎",
+        "weight": 15,
+        "basePoint": 5,
+        "linePayout": 300
+      },
+      {
+        "id": "seven",
+        "display": "7️⃣",
+        "weight": 10,
+        "basePoint": 10,
+        "linePayout": 1500
+      }
+    ],
+    "round": {
+      "autoClearOnTarget": true,
+      "baseHands": 5,
+      "maxRoundMvp": 10,
+      "roundTargets": [
+        {
+          "round": 1,
+          "targetScore": "120"
+        },
+        {
+          "round": 2,
+          "targetScore": "220"
+        },
+        {
+          "round": 3,
+          "targetScore": "400"
+        },
+        {
+          "round": 4,
+          "targetScore": "750"
+        },
+        {
+          "round": 5,
+          "targetScore": "1400"
+        },
+        {
+          "round": 6,
+          "targetScore": "2600"
+        },
+        {
+          "round": 7,
+          "targetScore": "4800"
+        },
+        {
+          "round": 8,
+          "targetScore": "9000"
+        },
+        {
+          "round": 9,
+          "targetScore": "17000"
+        },
+        {
+          "round": 10,
+          "targetScore": "32000"
+        }
+      ],
+      "carryRoundScore": false,
+      "carryCoins": true,
+      "carryItems": true,
+      "maxExtraHands": 2,
+      "milestoneCards": {
+        "afterRound": 3,
+        "cards": [
+          {
+            "id": "prune",
+            "nameKo": "심벌 삭제",
+            "effect": {
+              "kind": "remove_weighted_symbol",
+              "redistribution": "proportional"
+            }
+          },
+          {
+            "id": "evolve",
+            "nameKo": "전체 강화",
+            "effect": {
+              "kind": "grant_symbol_upgrades",
+              "itemIds": [
+                "golden_harvest",
+                "lemon_syrup",
+                "resonance_hammer",
+                "gem_appraiser",
+                "lucky_crown"
+              ],
+              "spinFactor": {
+                "num": 5,
+                "den": 4
+              }
+            }
+          },
+          {
+            "id": "wild",
+            "nameKo": "영구 조커",
+            "effect": {
+              "kind": "first_and_last_hand_wild_each_round",
+              "cellIndex": 4
+            }
+          },
+          {
+            "id": "windfall",
+            "nameKo": "돈벼락",
+            "effect": {
+              "kind": "grant_coins",
+              "coins": 30
+            }
+          }
+        ],
+        "offerCount": 4
+      },
+      "endless": {
+        "targetGrowth": {
+          "num": 19,
+          "den": 10
+        },
+        "targetRounding": "ceil"
+      }
+    },
+    "economy": {
+      "startingCoins": 3,
+      "baseClearReward": 4,
+      "unusedHandReward": 1,
+      "interestPerCoins": 5,
+      "interestCap": 2,
+      "failedRoundReward": 0,
+      "clearRewardPerRound": 1
+    },
+    "shop": {
+      "slots": 4,
+      "unlimitedPurchases": true,
+      "firstPaidRerollPrice": 1,
+      "rerollPriceIncreasePerPaidReroll": 1,
+      "paidRerollCountResetsPerShop": true,
+      "rarityWeight": {
+        "common": 60,
+        "rare": 27,
+        "epic": 10,
+        "legendary": 3
+      },
+      "allowDuplicateIdsInSameOffer": false,
+      "basePermanentItemSlots": 8,
+      "baseLimitedItemSlots": 2,
+      "discountPriceFloor": 1,
+      "offerSelection": "rarity_then_uniform_without_replacement",
+      "excludeFullInventoryItems": false,
+      "allowPreviousOfferItems": true,
+      "emptySlotsOnPoolExhaustion": true,
+      "vipActivation": "next_round"
+    },
+    "itemRules": {
+      "oneBoardModifierPerHand": true,
+      "defaultAutotrigger": true,
+      "stackSameItemPayoutBonusesAdditively": true,
+      "perLineRounding": "floor",
+      "globalMultiplierRounding": "floor",
+      "maxScoreFormat": "decimal_string",
+      "boardModifierPriority": [
+        "reroll_last_column",
+        "best_candidate_edit",
+        "random_candidate_edit",
+        "seven_transform",
+        "mirror_copier"
+      ],
+      "bestCandidateTieBreak": "line_definition_order",
+      "bestCandidateVirtualRolls": "shared_lazy_per_spin",
+      "consecutiveWinsCarryAcrossRounds": true,
+      "selected8Items": true,
+      "consumableActivation": "once_per_round_remaining_hands"
+    },
+    "ranking": {
+      "sortOrder": [
+        "completedRounds_desc",
+        "runTotalScore_desc",
+        "endedAt_asc"
+      ],
+      "oneBestRecordPerAccount": true
+    }
+  },
+  "lines": {
+    "version": "v0.13",
+    "lines": [
+      {
+        "id": "row_top",
+        "indices": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "id": "row_middle",
+        "indices": [
+          3,
+          4,
+          5
+        ]
+      },
+      {
+        "id": "row_bottom",
+        "indices": [
+          6,
+          7,
+          8
+        ]
+      },
+      {
+        "id": "col_left",
+        "indices": [
+          0,
+          3,
+          6
+        ]
+      },
+      {
+        "id": "col_middle",
+        "indices": [
+          1,
+          4,
+          7
+        ]
+      },
+      {
+        "id": "col_right",
+        "indices": [
+          2,
+          5,
+          8
+        ]
+      },
+      {
+        "id": "diag_main",
+        "indices": [
+          0,
+          4,
+          8
+        ]
+      },
+      {
+        "id": "diag_anti",
+        "indices": [
+          2,
+          4,
+          6
+        ]
+      }
+    ],
+    "squares": [
+      {
+        "id": "square_top_left",
+        "indices": [
+          0,
+          1,
+          4,
+          3
+        ]
+      },
+      {
+        "id": "square_top_right",
+        "indices": [
+          1,
+          2,
+          5,
+          4
+        ]
+      },
+      {
+        "id": "square_bottom_left",
+        "indices": [
+          3,
+          4,
+          7,
+          6
+        ]
+      },
+      {
+        "id": "square_bottom_right",
+        "indices": [
+          4,
+          5,
+          8,
+          7
+        ]
+      }
+    ]
+  },
+  "catalog": {
+    "version": "v0.13",
+    "chanceUnits": "basis_points: 10000 = 100%",
+    "items": [
+      {
+        "id": "cherry_farm",
+        "nameKo": "체리 농장",
+        "rarity": "common",
+        "price": 2,
+        "category": "weight",
+        "slot": "permanent",
+        "maxStacks": 5,
+        "effect": {
+          "kind": "weight_add",
+          "symbol": "cherry",
+          "amount": 10
+        },
+        "minShopRound": 3
+      },
+      {
+        "id": "lemon_orchard",
+        "nameKo": "레몬 과수원",
+        "rarity": "common",
+        "price": 2,
+        "category": "weight",
+        "slot": "permanent",
+        "maxStacks": 5,
+        "effect": {
+          "kind": "weight_add",
+          "symbol": "lemon",
+          "amount": 9
+        },
+        "minShopRound": 3
+      },
+      {
+        "id": "bell_foundry",
+        "nameKo": "종 제작소",
+        "rarity": "common",
+        "price": 2,
+        "category": "weight",
+        "slot": "permanent",
+        "maxStacks": 5,
+        "effect": {
+          "kind": "weight_add",
+          "symbol": "bell",
+          "amount": 8
+        },
+        "minShopRound": 3
+      },
+      {
+        "id": "gem_mine",
+        "nameKo": "보석 광산",
+        "rarity": "rare",
+        "price": 2,
+        "category": "weight",
+        "slot": "permanent",
+        "maxStacks": 5,
+        "effect": {
+          "kind": "weight_add",
+          "symbol": "diamond",
+          "amount": 6
+        },
+        "minShopRound": 3
+      },
+      {
+        "id": "sevens_blessing",
+        "nameKo": "세븐의 축복",
+        "rarity": "rare",
+        "price": 4,
+        "category": "weight",
+        "slot": "permanent",
+        "maxStacks": 5,
+        "effect": {
+          "kind": "weight_add",
+          "symbol": "seven",
+          "amount": 4
+        },
+        "minShopRound": 3
+      },
+      {
+        "id": "golden_harvest",
+        "nameKo": "황금 수확",
+        "rarity": "common",
+        "price": 3,
+        "category": "payout",
+        "slot": "permanent",
+        "maxStacks": null,
+        "effect": {
+          "kind": "symbol_line_add_factor",
+          "symbol": "cherry",
+          "extraFactor": {
+            "num": 2,
+            "den": 1
+          },
+          "basePointAdd": "2"
+        }
+      },
+      {
+        "id": "lemon_syrup",
+        "nameKo": "레몬 시럽",
+        "rarity": "common",
+        "price": 3,
+        "category": "payout",
+        "slot": "permanent",
+        "maxStacks": null,
+        "effect": {
+          "kind": "symbol_line_add_factor",
+          "symbol": "lemon",
+          "extraFactor": {
+            "num": 3,
+            "den": 2
+          },
+          "basePointAdd": "4"
+        }
+      },
+      {
+        "id": "resonance_hammer",
+        "nameKo": "공명 망치",
+        "rarity": "common",
+        "price": 3,
+        "category": "payout",
+        "slot": "permanent",
+        "maxStacks": null,
+        "effect": {
+          "kind": "symbol_line_add_factor",
+          "symbol": "bell",
+          "extraFactor": {
+            "num": 5,
+            "den": 4
+          },
+          "basePointAdd": "6"
+        }
+      },
+      {
+        "id": "gem_appraiser",
+        "nameKo": "보석 감정사",
+        "rarity": "rare",
+        "price": 3,
+        "category": "payout",
+        "slot": "permanent",
+        "maxStacks": null,
+        "effect": {
+          "kind": "symbol_line_add_factor",
+          "symbol": "diamond",
+          "extraFactor": {
+            "num": 1,
+            "den": 1
+          },
+          "basePointAdd": "10"
+        }
+      },
+      {
+        "id": "lucky_crown",
+        "nameKo": "행운의 왕관",
+        "rarity": "rare",
+        "price": 4,
+        "category": "payout",
+        "slot": "permanent",
+        "maxStacks": null,
+        "effect": {
+          "kind": "symbol_line_add_factor",
+          "symbol": "seven",
+          "extraFactor": {
+            "num": 3,
+            "den": 4
+          },
+          "basePointAdd": "20"
+        }
+      },
+      {
+        "id": "miracle_hand",
+        "nameKo": "기적의 손",
+        "rarity": "rare",
+        "price": 8,
+        "category": "board",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "random_candidate_edit",
+          "triggerChanceBasisPoints": 2000,
+          "candidateSelection": "uniform_per_line",
+          "boardPriority": "random_candidate_edit"
+        }
+      },
+      {
+        "id": "joker_mask",
+        "nameKo": "조커의 가면",
+        "rarity": "rare",
+        "price": 5,
+        "category": "board",
+        "slot": "charged",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "wild_center",
+          "changesVisualSymbol": false,
+          "triggerPolicy": "remaining_hands_once_per_round"
+        },
+        "initialCharges": 1
+      },
+      {
+        "id": "broken_lever",
+        "nameKo": "고장 난 레버",
+        "rarity": "rare",
+        "price": 4,
+        "category": "board",
+        "slot": "charged",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "reroll_last_column",
+          "condition": "no_completed_raw_lines",
+          "boardPriority": "reroll_last_column",
+          "triggerPolicy": "remaining_hands_once_per_round"
+        },
+        "initialCharges": 3
+      },
+      {
+        "id": "scammers_card",
+        "nameKo": "사기꾼의 카드",
+        "rarity": "rare",
+        "price": 4,
+        "category": "score",
+        "slot": "charged",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "virtual_cherry_line_bonus",
+          "condition": "at_least_one_incomplete_final_line",
+          "fixedPoints": 30,
+          "countsAsRealWinningLine": false,
+          "triggerPolicy": "remaining_hands_once_per_round"
+        },
+        "initialCharges": 1
+      },
+      {
+        "id": "future_mirror",
+        "nameKo": "미래의 거울",
+        "rarity": "rare",
+        "price": 5,
+        "category": "board",
+        "slot": "charged",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "convert_random_nonseven_to_seven",
+          "condition": "at_least_two_sevens",
+          "boardPriority": "seven_transform",
+          "triggerPolicy": "remaining_hands_once_per_round"
+        },
+        "initialCharges": 2
+      },
+      {
+        "id": "magnet_device",
+        "nameKo": "자석 장치",
+        "rarity": "rare",
+        "price": 4,
+        "category": "board",
+        "slot": "charged",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "random_candidate_edit",
+          "candidateSelection": "uniform_per_line",
+          "boardPriority": "random_candidate_edit",
+          "triggerPolicy": "remaining_hands_once_per_round"
+        },
+        "initialCharges": 1
+      },
+      {
+        "id": "calculated_miracle",
+        "nameKo": "계산된 기적",
+        "rarity": "epic",
+        "price": 8,
+        "category": "board",
+        "slot": "charged",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "best_candidate_edit",
+          "candidateSelection": "best_delta_after_all_scoring",
+          "boardPriority": "best_candidate_edit",
+          "triggerPolicy": "remaining_hands_once_per_round"
+        },
+        "initialCharges": 1
+      },
+      {
+        "id": "volatile_joker",
+        "nameKo": "변덕스러운 조커",
+        "rarity": "rare",
+        "price": 6,
+        "category": "board",
+        "slot": "charged",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "random_candidate_edit",
+          "candidateSelection": "uniform_per_line",
+          "selectedLineMultiplier": {
+            "num": 3,
+            "den": 1
+          },
+          "boardPriority": "random_candidate_edit",
+          "triggerPolicy": "remaining_hands_once_per_round"
+        },
+        "initialCharges": 2
+      },
+      {
+        "id": "resonant_bell",
+        "nameKo": "공명의 종",
+        "rarity": "epic",
+        "price": 7,
+        "category": "score",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "spin_multiplier_if_min_real_lines",
+          "minRealWinningLines": 2,
+          "factor": {
+            "num": 4,
+            "den": 1
+          }
+        }
+      },
+      {
+        "id": "jackpot_crown",
+        "nameKo": "잭팟 왕관",
+        "rarity": "legendary",
+        "price": 8,
+        "category": "score",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "conditional_per_line_factor",
+          "forSeven": {
+            "num": 10,
+            "den": 1
+          },
+          "forOther": {
+            "num": 1,
+            "den": 2
+          }
+        }
+      },
+      {
+        "id": "devils_contract",
+        "nameKo": "악마의 계약",
+        "rarity": "legendary",
+        "price": 9,
+        "category": "score",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "zero_base_plus_per_real_line_factor",
+          "perRealLineFactor": {
+            "num": 4,
+            "den": 1
+          },
+          "doesNotMultiplyVirtualBonus": true
+        }
+      },
+      {
+        "id": "win_streak",
+        "nameKo": "연속 승부",
+        "rarity": "rare",
+        "price": 6,
+        "category": "score",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "consecutive_win_multiplier",
+          "factorPerExtraHit": {
+            "num": 3,
+            "den": 2
+          },
+          "maxExponent": 4,
+          "resetOnNoLine": true
+        }
+      },
+      {
+        "id": "piggy_bank",
+        "nameKo": "저금통",
+        "rarity": "common",
+        "price": 3,
+        "category": "economy",
+        "slot": "permanent",
+        "maxStacks": 2,
+        "effect": {
+          "kind": "clear_base_coins_add",
+          "amount": 1
+        }
+      },
+      {
+        "id": "compound_magic",
+        "nameKo": "복리의 마법",
+        "rarity": "rare",
+        "price": 5,
+        "category": "economy",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "interest_cap_add",
+          "amount": 1
+        }
+      },
+      {
+        "id": "vip_pass",
+        "nameKo": "VIP 회원권",
+        "rarity": "rare",
+        "price": 4,
+        "category": "economy",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "one_free_reroll_per_shop",
+          "amount": 1
+        }
+      },
+      {
+        "id": "haggler",
+        "nameKo": "흥정의 달인",
+        "rarity": "epic",
+        "price": 8,
+        "category": "economy",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "shop_item_cost_subtract",
+          "amount": 1,
+          "minPrice": 1
+        }
+      },
+      {
+        "id": "lucky_payday",
+        "nameKo": "행운의 급여일",
+        "rarity": "rare",
+        "price": 4,
+        "category": "economy",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "chance_coins_on_clear",
+          "triggerChanceBasisPoints": 2500,
+          "coins": 3
+        }
+      },
+      {
+        "id": "extra_hand",
+        "nameKo": "여분의 손",
+        "rarity": "rare",
+        "price": 6,
+        "category": "resource",
+        "slot": "permanent",
+        "maxStacks": 3,
+        "effect": {
+          "kind": "round_hands_add",
+          "amount": 1
+        }
+      },
+      {
+        "id": "square_seal",
+        "nameKo": "사각의 인장",
+        "rarity": "rare",
+        "price": 5,
+        "category": "score",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "square_match_bonus",
+          "payoutFactor": {
+            "num": 1,
+            "den": 1
+          },
+          "usesWildCenter": false,
+          "countsAsRealWinningLine": false
+        }
+      },
+      {
+        "id": "seven_tracker",
+        "nameKo": "세븐 추적기",
+        "rarity": "rare",
+        "price": 4,
+        "category": "weight",
+        "slot": "permanent",
+        "maxStacks": 5,
+        "effect": {
+          "kind": "queue_next_hand_weight_if_symbol_absent",
+          "observedBoard": "finalPhysicalBoard",
+          "absentSymbol": "seven",
+          "bonusSymbol": "seven",
+          "bonusWeight": 4,
+          "bonusScope": "all_cells",
+          "durationHands": 1,
+          "pendingPolicy": "replace_same_instance",
+          "consumesOn": "next_actual_hand_draw"
+        }
+      },
+      {
+        "id": "mirror_copier",
+        "nameKo": "거울 복사기",
+        "rarity": "rare",
+        "price": 4,
+        "category": "board",
+        "slot": "charged",
+        "maxStacks": 1,
+        "initialCharges": 2,
+        "effect": {
+          "kind": "copy_physical_column",
+          "condition": "left_and_right_columns_differ",
+          "sourceCellIndices": [
+            0,
+            3,
+            6
+          ],
+          "targetCellIndices": [
+            2,
+            5,
+            8
+          ],
+          "boardPriority": "mirror_copier",
+          "consumesPhysicalEditSlot": true,
+          "chargeOn": "at_least_one_physical_cell_changed",
+          "triggerPolicy": "remaining_hands_once_per_round"
+        }
+      },
+      {
+        "id": "corner_collector",
+        "nameKo": "모서리 수집가",
+        "rarity": "rare",
+        "price": 4,
+        "category": "score",
+        "slot": "permanent",
+        "maxStacks": 2,
+        "effect": {
+          "kind": "award_pattern_points_if_equal_corners",
+          "sourceBoard": "finalPhysicalBoard",
+          "cornerCellIndices": [
+            0,
+            2,
+            6,
+            8
+          ],
+          "pointsPerStack": 500,
+          "scoreBucket": "patternBonus",
+          "countsAsActualLine": false
+        }
+      },
+      {
+        "id": "crossroads_bonus",
+        "nameKo": "교차로 보너스",
+        "rarity": "epic",
+        "price": 6,
+        "category": "score",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "award_pattern_points_for_crossing_cells",
+          "lineSource": "actualWinningLines",
+          "minDistinctWinningLinesAtCell": 2,
+          "pointsPerCell": 200,
+          "maxRewardedCells": 3,
+          "countUniqueCells": true,
+          "includeWildResolvedActualLines": true,
+          "excludeVirtualLines": true,
+          "scoreBucket": "patternBonus"
+        }
+      },
+      {
+        "id": "receipt_collector",
+        "nameKo": "영수증 수집가",
+        "rarity": "common",
+        "price": 3,
+        "category": "economy",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "refund_coins_every_n_item_purchases",
+          "triggerEvent": "ITEM_PURCHASED",
+          "eligibleEvent": "successful_item_purchase_after_payment",
+          "purchasesPerRefund": 3,
+          "refundCoins": 1,
+          "counterScope": "per_item_instance_across_shops",
+          "counterReset": "subtract_threshold_after_refund",
+          "activeFrom": "following_round",
+          "refundTime": "same_purchase_transaction",
+          "includeOwnAcquisition": false,
+          "excludeRerollsAndDiscards": true
+        }
+      },
+      {
+        "id": "emergency_lever",
+        "nameKo": "비상 레버",
+        "rarity": "legendary",
+        "price": 9,
+        "category": "hand",
+        "slot": "charged",
+        "maxStacks": 1,
+        "initialCharges": 1,
+        "effect": {
+          "kind": "clear_round_before_run_failed",
+          "minimumTargetRatio": {
+            "num": 7,
+            "den": 10
+          },
+          "automatic": true,
+          "chargeOn": "round_cleared"
+        }
+      },
+      {
+        "id": "editors_proof",
+        "nameKo": "편집자의 증명",
+        "rarity": "epic",
+        "price": 5,
+        "category": "score",
+        "slot": "permanent",
+        "maxStacks": 1,
+        "effect": {
+          "kind": "multiply_actual_line_payout_if_physical_board_changed",
+          "condition": "physicalChanged",
+          "lineSource": "actualWinningLines",
+          "factor": {
+            "num": 2,
+            "den": 1
+          },
+          "doesNotModify": [
+            "baseScore",
+            "virtualBonus",
+            "patternBonus"
+          ],
+          "includesWildResolvedActualLines": true
+        }
+      },
+      {
+        "id": "score_puffer",
+        "nameKo": "뻥튀기",
+        "rarity": "rare",
+        "price": 6,
+        "category": "score",
+        "slot": "permanent",
+        "maxStacks": 5,
+        "minShopRound": 5,
+        "effect": {
+          "kind": "spin_multiplier",
+          "factor": {
+            "num": 3,
+            "den": 2
+          }
+        }
+      }
+    ]
+  }
+}

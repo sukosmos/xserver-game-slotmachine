@@ -35,7 +35,7 @@ function lifetime(item, instance) {
   const pending = instance && !isActive(instance) ? `R${instance.activeFromRound}부터 · ` : '';
   if (item.slot === 'charged') return `${pending}발동 ${instance?.remainingCharges ?? item.initialCharges}회`;
   if (item.slot === 'timed') return `${pending}${instance?.remainingSpins ?? item.durationSpins} Hand`;
-  return `${pending}영구`;
+  return `${pending}${item.inventoryGroup === 'upgrade' ? '강화' : '영구'}`;
 }
 function render() {
   document.querySelectorAll('[data-tab]').forEach((el) => { el.disabled = busy; el.classList.toggle('nav-active', el.dataset.tab === tab); el.setAttribute('aria-current', el.dataset.tab === tab ? 'page' : 'false'); });
@@ -121,31 +121,53 @@ function instanceStatus(item, instance) {
   return pending ? `다음 스핀 세븐 +${pending.amount}` : '';
 }
 function renderInventory() {
-  const inventory = run?.items ?? [];
-  const ids = [...new Set(inventory.map((item) => item.itemId))];
-  const permanent = ids.filter((id) => itemOf(id).slot === 'permanent').length;
-  const limited = inventory.filter((item) => itemOf(item.itemId).slot !== 'permanent').length;
-  return `<section class="inventory"><div class="section-title"><h2>아이템</h2><small>영구 ${permanent}/${catalog.permanentSlots} · 제한 ${limited}/${catalog.limitedSlots}</small></div>${inventory.length ? `<div class="inventory-grid">${ids.map((id) => {
-    const item = itemOf(id), instances = inventory.filter((instance) => instance.itemId === id), active = instances.filter(isActive).length;
-    const label = item.slot !== 'permanent' ? `${lifetime(item, instances[0])}${instanceStatus(item, instances[0]) ? ` · ${instanceStatus(item, instances[0])}` : ''}` : active === 0 ? '다음 라운드' : instanceStatus(item, instances[0]) || (active === instances.length ? '적용 중' : `적용 ${active} · 다음 ${instances.length - active}`);
-    return `<button class="inventory-item ${item.rarity}" data-action="owned" data-value="${id}">${icon(itemIcon(item))}<span><strong>${esc(item.nameKo)}${instances.length > 1 ? ` ×${instances.length}` : ''}</strong><small>${label}</small></span></button>`;
-  }).join('')}</div>` : '<p class="empty-label">없음</p>'}</section>`;
+  const inventory = run?.items ?? [], ids = [...new Set(inventory.map(item => item.itemId))];
+  const groupOf = item => item.inventoryGroup ?? (item.slot === 'permanent' ? 'permanent' : 'limited');
+  const groups = [['permanent','영구',catalog.permanentSlots],['limited','제한',catalog.limitedSlots], ...(catalog.upgradeItemIds ? [['upgrade','강화',null]] : [])];
+  return `<section class="inventory"><div class="section-title"><h2>아이템</h2></div>${groups.map(([group,label,limit]) => {
+    const selected = ids.filter(id => groupOf(itemOf(id)) === group);
+    const count = group === 'limited' ? inventory.filter(i => groupOf(itemOf(i.itemId)) === group).length : selected.length;
+    return `<div class="inventory-group"><h3>${label}<small>${limit === null ? `${count}종 · 무제한` : `${count}/${limit}`}</small></h3>${selected.length ? `<div class="inventory-grid">${selected.map(id => {
+      const item=itemOf(id), instances=inventory.filter(i=>i.itemId===id), active=instances.filter(isActive).length;
+      const status=item.slot!=='permanent' ? `${lifetime(item,instances[0])}${instanceStatus(item,instances[0]) ? ` · ${instanceStatus(item,instances[0])}` : ''}` : active===0 ? '다음 라운드' : instanceStatus(item,instances[0]) || (active===instances.length ? '적용 중' : `적용 ${active} · 다음 ${instances.length-active}`);
+      return `<button class="inventory-item ${item.rarity}" data-action="owned" data-value="${id}">${icon(itemIcon(item))}<span><strong>${esc(item.nameKo)}${instances.length>1 ? ` ×${instances.length}` : ''}</strong><small>${status}</small></span></button>`;
+    }).join('')}</div>` : '<p class="empty-label">없음</p>'}</div>`;
+  }).join('')}</section>`;
+}
+function renderOffers(shop) {
+  const groups = catalog.offerGroups ? [['upgrade','강화',catalog.offerGroups.upgrade],['item','아이템',catalog.offerGroups.item]] : [[null,null,null]];
+  return groups.map(([group,title,count]) => `<div class="shop-group">${title ? `<h3>${title}<small>${count}칸</small></h3>` : ''}<div class="shop-offers">${shop.slots.filter(o=>!group || o.group===group).map(offer=>{
+    if(!offer.itemId) return `<div class="sold-out">${offer.soldOut ? '품절' : '상품 없음'}</div>`;
+    const item=itemOf(offer.itemId);
+    return `<article class="shop-card ${item.rarity}"><div class="item-top">${icon(itemIcon(item))}<div><button class="item-name" data-action="item" data-value="${item.id}">${esc(item.nameKo)}</button><span class="rarity">${rarity[item.rarity]} · ${lifetime(item)}</span></div>${button(`${offer.price} 코인${offer.canBuy ? '<small>구매</small>' : `<small>${reasons[offer.blockedReason] ?? '구매 불가'}</small>`}`, 'buy', {disabled:blocked() || !offer.canBuy,className:'buy-button',value:offer.slotId})}</div><p>${esc(item.summary)}</p></article>`;
+  }).join('')}</div></div>`).join('');
 }
 function renderShop() {
   const shop = run?.shop, settlement = lastEvent?.settlement;
-  return `<section class="shop"><div class="section-title"><h2>상점</h2>${shop ? `<small>${run.coins}코인</small>` : ''}</div>${settlement ? `<details class="settlement"><summary>정산 +${settlement.reward}코인</summary><dl><div><dt>기본</dt><dd>+${settlement.baseReward + settlement.itemBaseBonus}</dd></div><div><dt>남은 Hand</dt><dd>+${settlement.handBonus}</dd></div><div><dt>이자</dt><dd>+${settlement.interest}</dd></div>${settlement.bonusCoins ? `<div><dt>추가 보상</dt><dd>+${settlement.bonusCoins}</dd></div>` : ''}</dl></details>` : ''}${shop ? `<div class="shop-offers">${shop.slots.map((offer) => {
-    if (!offer.itemId) return `<div class="sold-out">${offer.soldOut ? '품절' : '빈 슬롯'}</div>`;
-    const item = itemOf(offer.itemId);
-    return `<article class="shop-card ${item.rarity}"><div class="item-top">${icon(itemIcon(item))}<div><button class="item-name" data-action="item" data-value="${item.id}">${esc(item.nameKo)}</button><span class="rarity">${rarity[item.rarity]} · ${lifetime(item)}</span></div>${button(`${offer.price} 코인${offer.canBuy ? '<small>구매</small>' : `<small>${reasons[offer.blockedReason] ?? '구매 불가'}</small>`}`, 'buy', { disabled: blocked() || !offer.canBuy, className: 'buy-button', value: offer.slotId })}</div><p>${esc(item.summary)}</p></article>`;
-  }).join('')}</div>${button(`↻ 새로고침 <span>${shop.rerollPrice === 0 ? '무료' : `${shop.rerollPrice ?? '—'} 코인`}</span>`, 'reroll', { disabled: blocked() || !shop.canReroll, className: 'reroll-button' })}` : `<p class="empty-label">${ended() ? '종료' : '라운드 클리어 후 열림'}</p>`}</section>`;
+  return `<section class="shop"><div class="section-title"><h2>상점</h2>${shop ? `<small>${run.coins}코인</small>` : ''}</div>${settlement ? `<details class="settlement"><summary>정산 +${settlement.reward}코인</summary><dl><div><dt>기본</dt><dd>+${settlement.baseReward + settlement.itemBaseBonus}</dd></div><div><dt>남은 Hand</dt><dd>+${settlement.handBonus}</dd></div><div><dt>이자</dt><dd>+${settlement.interest}</dd></div>${settlement.bonusCoins ? `<div><dt>추가 보상</dt><dd>+${settlement.bonusCoins}</dd></div>` : ''}</dl></details>` : ''}${shop ? `${renderOffers(shop)}${button(`↻ 새로고침 <span>${shop.rerollPrice === 0 ? '무료' : `${shop.rerollPrice ?? '—'} 코인`}</span>`, 'reroll', { disabled: blocked() || !shop.canReroll, className: 'reroll-button' })}` : `<p class="empty-label">${ended() ? '종료' : '라운드 클리어 후 열림'}</p>`}</section>`;
 }
 function renderCatalog() {
   return `<section class="page-intro"><h1>아이템 <small>${catalog.items.length}</small></h1></section><div class="catalog-grid">${catalog.items.map((item) => `<article class="shop-card ${item.rarity}"><div class="item-top">${icon(itemIcon(item))}<span class="rarity">${rarity[item.rarity]} · ${lifetime(item)}</span></div><button class="item-name" data-action="item" data-value="${item.id}">${esc(item.nameKo)}</button><p>${esc(item.summary)}</p><div class="catalog-bottom"><span>${item.price} 코인</span><span>${stackLabel(item)}</span></div></article>`).join('')}</div>`;
 }
 function renderRanks() {
-  return `<section class="page-intro"><h1>랭킹</h1>${button('새로고침', 'ranking', { disabled: busy })}</section><section class="rank-panel"><div class="rank-head"><span>순위 / 플레이어</span><span>완료 라운드</span><span>누적 점수</span></div>${ranks.length ? ranks.map((entry) => `<div class="rank-row ${entry.playerId === playerId ? 'my-rank' : ''}"><div><b>${String(entry.rank).padStart(2, '0')}</b><span>${entry.playerId === playerId ? '내 기록' : `PLAYER ${entry.playerId.slice(0, 6).toUpperCase()}`}<small>${esc(new Date(entry.endedAt).toLocaleString('ko-KR'))} · ${esc(entry.rulesVersion)}</small></span></div><strong>${entry.completedRounds}</strong>${number(entry.runTotalScore, 'rank-score')}</div>`).join('') : '<p class="empty-label rank-empty">기록 없음</p>'}</section>`;
+  return `<section class="page-intro"><h1>랭킹</h1>${button('새로고침','ranking',{disabled:busy})}</section><section class="rank-panel"><div class="rank-head"><span>순위 / 플레이어</span><span>완료 라운드</span><span>누적 점수</span></div>${ranks.length ? ranks.map(entry=>`<button class="rank-row ${entry.playerId===playerId ? 'my-rank' : ''}" data-action="rank-detail" data-value="${esc(entry.runId)}" aria-label="${entry.rank}위 · ${entry.completedRounds}라운드 완료 · 빌드 보기"><div><b>${String(entry.rank).padStart(2,'0')}</b><span>${entry.playerId===playerId ? '내 기록' : `PLAYER ${entry.playerId.slice(0,6).toUpperCase()}`}<small>${esc(new Date(entry.endedAt).toLocaleString('ko-KR'))} · ${esc(entry.rulesVersion)}</small></span></div><strong>${entry.completedRounds}</strong><span class="rank-score" title="${exactScore(entry.runTotalScore)}">${compactScore(entry.runTotalScore)}<small>빌드 보기 ↗</small></span></button>`).join('') : '<p class="empty-label rank-empty">기록 없음</p>'}</section>`;
 }
-function details(content) { $('#detail-content').innerHTML = content; if (!$('#details').open) $('#details').showModal(); }
+let rankRequest = 0;
+function details(content, wide = false) { rankRequest += 1; $('#details').classList.toggle('rank-details',wide); $('#detail-content').innerHTML=content; if(!$('#details').open) $('#details').showModal(); }
+async function showRank(id) {
+  details('<h2>기록 상세</h2><p role="status">불러오는 중…</p>',true);
+  const request=rankRequest;
+  try {
+    const {snapshot:s,playerId:owner}=await client.get(`/leaderboard/${encodeURIComponent(id)}`);
+    if(request!==rankRequest || !$('#details').open) return;
+    const groups=[['permanent','영구',s.permanentSlots],['limited','제한',s.limitedSlots],...(s.hasUpgradeGroup ? [['upgrade','강화',null]] : [])];
+    const score=value=>`<span title="${exactScore(value)}">${compactScore(value)}</span>`;
+    details(`<h2>${owner===playerId ? '내 기록' : `PLAYER ${esc(owner.slice(0,6).toUpperCase())}`}</h2><p class="rank-subtitle">R${s.roundIndex} · ${s.mode==='endless' ? 'ENDLESS · ' : ''}${s.outcome==='RUN_WON' ? '클리어' : '종료'} · ${esc(s.rulesVersion)}</p><div class="rank-summary"><div><small>완료 라운드</small><strong>${s.completedRounds}</strong></div><div><small>누적 점수</small><strong>${score(s.runTotalScore)}</strong></div><div><small>라운드 점수 / 목표</small><strong>${score(s.roundScore)} / ${score(s.targetScore)}</strong></div></div><p class="muted">마지막 스핀 기준 · 소모된 아이템 포함</p><div class="rank-build-layout"><section><h3>슬롯 스탯</h3><table class="symbol-table"><caption>기본 → 적용</caption><thead><tr><th>심벌</th><th>1칸 점수</th><th>3개 배당</th><th>추첨 확률</th></tr></thead><tbody>${s.build.symbols.map(row=>`<tr><th scope="row">${icon(row.id)}<span class="sr-only">${esc(catalog.symbols.find(symbol=>symbol.id===row.id)?.name ?? row.id)}</span></th><td title="${exactScore(row.point)}">${statChange(row.basePoint,row.point)}</td><td title="${exactScore(row.linePayout)}">${statChange(row.baseLinePayout,row.linePayout)}</td><td title="가중치 ${row.weight} / ${s.build.totalWeight}">${statChange(row.baseProbability,row.probability,true)}<small class="rank-weight">가중치 ${row.weight}</small></td></tr>`).join('')}</tbody></table><dl><div><dt>라운드 Hand</dt><dd>${s.build.hands}</dd></div><div><dt>연속 당첨</dt><dd>${s.consecutiveWinHands}</dd></div></dl>${s.build.milestoneReward ? `<div class="rank-blessing"><strong>${esc(s.build.milestoneReward.name)}</strong><p>${esc(s.build.milestoneReward.summary)}</p></div>` : ''}${groups.map(([group,label,limit])=>{
+      const items=s.items.filter(i=>i.group===group), count=group==='limited' ? items.reduce((sum,i)=>sum+i.stacks,0) : items.length;
+      return `<div class="rank-item-group"><h3>${label}<small>${limit===null ? `${count}종 · 무제한` : `${count}/${limit}`}</small></h3>${items.length ? items.map(i=>`<details class="rank-item"><summary><span>${esc(i.name)}${i.stacks>1 ? ` ×${i.stacks}` : ''}</span><small>${i.instances.some(x=>x.consumed) ? '마지막 스핀 소모' : i.instances.some(x=>x.triggered) ? '발동' : ''}</small></summary><p>${esc(i.description)}</p>${i.instances.map(x=>`<small>${x.remainingCharges!==undefined ? `발동 ${x.remainingCharges}회 남음` : x.remainingSpins!==undefined ? `${x.remainingSpins} Hand 남음` : x.active ? '적용 중' : '활성 전'}${x.consumed ? ' → 소모' : ''}</small>`).join('')}</details>`).join('') : '<p class="empty-label">없음</p>'}</div>`;
+    }).join('')}</section><section class="rank-last-spin"><h3>마지막 스핀</h3><div class="mini-grid" role="img" aria-label="${esc(s.lastSpin.board.map(id=>catalog.symbols.find(symbol=>symbol.id===id)?.name ?? id).join(', '))}">${s.lastSpin.board.map((symbol,i)=>`<div>${icon(symbol)}${s.lastSpin.wildMarks.includes(i) ? '<span class="wild-label">WILD</span>' : ''}</div>`).join('')}</div><dl><div><dt>심벌 점수</dt><dd>${score(s.lastSpin.baseScore)}</dd></div><div><dt>라인 배당 · ${s.lastSpin.winningLines}라인</dt><dd>${score(s.lastSpin.lineScore)}</dd></div><div><dt>패턴 / 가상 배당</dt><dd>${score(s.lastSpin.patternScore)} / ${score(s.lastSpin.virtualScore)}</dd></div><div><dt>적용 배수</dt><dd>${esc(s.lastSpin.multiplier)}</dd></div><div><dt>스핀 점수</dt><dd>${score(s.lastSpin.spinScore)}</dd></div></dl></section></div>`,true);
+  } catch { if(request===rankRequest && $('#details').open) details('<h2>기록 상세</h2><p>기록을 불러오지 못했어요. 랭킹을 새로고침해 주세요.</p>'); }
+}
 function showItem(id, owned = false) {
   const item = itemOf(id); if (!item) return;
   const instances = owned ? run.items.filter((instance) => instance.itemId === id) : [];
@@ -352,6 +374,7 @@ document.addEventListener('click', async (event) => {
   if (name === 'connect') await init();
   if (name === 'retry') await retry();
   if (name === 'ranking') await changeTab('ranking');
+  if (name === 'rank-detail') await showRank(value);
   if (name === 'play') await changeTab('play');
   if (name === 'before-after' && lastSpin) details(`<h2>보드 전후</h2><div class="board-comparison">${[lastSpin.rawBoard, lastSpin.board].map((board, i) => `<div><h3>${i ? '아이템 적용 후' : '처음 추첨'}</h3><div class="mini-grid">${board.map((id) => icon(id)).join('')}</div></div>`).join('')}</div>`);
   if (name === 'history') {

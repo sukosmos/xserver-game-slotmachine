@@ -213,7 +213,7 @@ export function parseRules(input) {
     offerSelection: 'rarity_then_uniform_without_replacement', excludeFullInventoryItems: false,
     allowPreviousOfferItems: true, emptySlotsOnPoolExhaustion: true, vipActivation: 'next_round',
   };
-  keys(shop, [...shopNumbers, ...Object.keys(shopFlags), 'rarityWeight'], [], 'balance.shop');
+  keys(shop, [...shopNumbers, ...Object.keys(shopFlags), 'rarityWeight'], ['upgradeItemIds', 'offerGroups'], 'balance.shop');
   for (const key of shopNumbers) integer(shop[key], `balance.shop.${key}`, 1);
   for (const [key, value] of Object.entries(shopFlags)) literal(shop[key], value, `balance.shop.${key}`);
   keys(shop.rarityWeight, rarities, [], 'balance.shop.rarityWeight');
@@ -279,6 +279,19 @@ export function parseRules(input) {
   if (catalog.items.some((item) => item.effect.kind === 'square_match_bonus')) check(lines.squares?.length === 4, 'lines.squares', 'square item requires geometry');
   if (catalog.items.some((item) => item.effect.kind === 'round_hands_add')) integer(round.maxExtraHands, 'balance.round.maxExtraHands', 1);
   unique(catalog.items.map((item) => item.id), 'catalog.items');
+  if (shop.upgradeItemIds !== undefined || shop.offerGroups !== undefined) {
+    array(shop.upgradeItemIds, 'shop.upgradeItemIds'); unique(shop.upgradeItemIds, 'shop.upgradeItemIds');
+    check(shop.upgradeItemIds.length > 0, 'shop.upgradeItemIds', 'empty upgrade pool');
+    for (const id of shop.upgradeItemIds) {
+      const item = catalog.items.find(i => i.id === id);
+      check(item?.slot === 'permanent' && ['weight_add','symbol_line_add_factor'].includes(item.effect.kind), 'shop.upgradeItemIds', 'requires permanent symbol upgrade');
+    }
+    keys(shop.offerGroups, ['upgrade','item'], [], 'shop.offerGroups');
+    integer(shop.offerGroups.upgrade, 'shop.offerGroups.upgrade', 1);
+    integer(shop.offerGroups.item, 'shop.offerGroups.item', 1);
+    check(shop.offerGroups.upgrade + shop.offerGroups.item === shop.slots, 'shop.offerGroups', 'must total shop slots');
+  }
+
   if (round.milestoneCards !== undefined) {
     const config = round.milestoneCards;
     keys(config, ['afterRound','cards'], ['offerCount'], 'milestoneCards');

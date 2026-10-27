@@ -66,6 +66,10 @@ export function checkDocumentation(rules, documents) {
     assert.equal(decisions.find((row) => row[0] === label)?.[1], value, `decision drift: ${label}`);
   }
 
+  if (shop.offerGroups) {
+    assert.ok(doc('docs/04-ECONOMY_SHOP.md').includes(`강화${shop.offerGroups.upgrade}칸 + 일반 아이템${shop.offerGroups.item}칸`), 'shop group drift');
+    assert.equal(shop.upgradeItemIds.length, 10, 'upgrade group drift');
+  }
   const itemText = doc('docs/03-ITEM_SYSTEM.md');
   assert.ok(itemText.includes('`' + rules.balance.itemRules.boardModifierPriority.join('` → `') + '`'), 'board modifier priority drift');
   const itemRows = rows(itemText).map((row) => row.map(clean));

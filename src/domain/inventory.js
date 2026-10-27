@@ -6,14 +6,20 @@ const positiveInteger = (value) => Number.isSafeInteger(value) && value > 0;
 
 export function createInventory() { return { items: [], nextItemOrder: 1 }; }
 
+export function inventoryGroup(item, rules) {
+  return rules.balance.shop.upgradeItemIds?.includes(item.id) ? 'upgrade' : item.slot === 'permanent' ? 'permanent' : 'limited';
+}
+
 export function inventoryUsage(items, rules) {
-  const permanent = new Set();
+  const permanent = new Set(), upgrade = new Set();
   let limited = 0;
   for (const instance of items) {
-    if (getItem(rules, instance.itemId).slot === 'permanent') permanent.add(instance.itemId);
+    const group = inventoryGroup(getItem(rules, instance.itemId), rules);
+    if (group === 'upgrade') upgrade.add(instance.itemId);
+    else if (group === 'permanent') permanent.add(instance.itemId);
     else limited += 1;
   }
-  return { permanent: permanent.size, limited };
+  return { permanent: permanent.size, limited, ...(rules.balance.shop.upgradeItemIds ? { upgrade: upgrade.size } : {}) };
 }
 
 export function validateItems(items, rules) {

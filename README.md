@@ -1,6 +1,8 @@
 # NINE TO RUN
 슬롯 머신 로그라이크 게임
 
+v0.14: 랭킹 클릭으로 마지막 스핀의 빌드·심벌 스탯·보드를 조회합니다. 새 런은 영구4/제한2/강화 무제한, 상점 강화2+일반3칸을 사용합니다. 기존 런은 시작 당시 규칙을 유지합니다.
+
 # To. Claude
 
 who's gonna install this repository to your server, please consider below.

@@ -112,6 +112,7 @@ test('current HTTP rules grant three coins, auto settle, and activate purchased 
     Object.assign(raw, currentRawRules());
     delete raw.balance.round.milestoneCards; // Isolated shop pool; cards have separate HTTP coverage.
     raw.balance.round.roundTargets[0].targetScore = '1';
+    raw.balance.shop.upgradeItemIds=['cherry_farm','golden_harvest'];
     raw.catalog.items = raw.catalog.items.filter((item) => ['cherry_farm', 'golden_harvest', 'extra_hand', 'square_seal', 'win_streak'].includes(item.id));
   });
   const created = (await call('/runs', { body: {}, key: 'auto-create' })).data;
@@ -124,8 +125,8 @@ test('current HTTP rules grant three coins, auto settle, and activate purchased 
   assert.equal(first.data.event.patternScore, '0');
   assert.deepEqual(first.data.event.winningPatterns, []);
   assert.ok(first.data.presentation.awards.every((award) => award.kind === 'line' && typeof award.score === 'string' && award.indices.length === 3));
-  assert.equal(first.data.state.shop.slots.length, 4);
-  assert.equal(new Set(first.data.state.shop.slots.map((slot) => slot.itemId)).size, 4);
+  assert.equal(first.data.state.shop.slots.length, 5);
+  assert.equal(new Set(first.data.state.shop.slots.map((slot) => slot.itemId)).size, 5);
   assert.deepEqual((await call(`/runs/${id}`)).data.presentation, first.data.presentation);
   assert.equal(first.data.state.revision, 1); assert.equal(first.data.state.canClaim, false);
   assert.deepEqual((await call(`/runs/${id}/spins`, { body: { expectedRevision: 0 }, key: 'auto-spin' })).data, first.data);
@@ -135,11 +136,11 @@ test('current HTTP rules grant three coins, auto settle, and activate purchased 
   assert.ok(!first.data.state.shop.slots.some((slot) => slot.itemId === 'cherry_farm'));
   const hand = first.data.state.shop.slots.find((slot) => slot.itemId === 'extra_hand');
   const bought = (await call(`/runs/${id}/shop/purchases`, { body: { expectedRevision: 1, slotId: hand.slotId }, key: 'buy' })).data;
-  assert.equal(bought.state.coins, 6); assert.equal(bought.upgrades.next.hands, 6);
+  assert.equal(bought.state.coins, 5); assert.equal(bought.upgrades.next.hands, 6);
   const rerolled = (await call(`/runs/${id}/shop/rerolls`, { body: { expectedRevision: 2 }, key: 'reroll' })).data;
-  assert.equal(rerolled.state.coins, 5);
+  assert.equal(rerolled.state.coins, 4);
   const next = (await call(`/runs/${id}/shop/continue`, { body: { expectedRevision: 3 }, key: 'next' })).data;
-  assert.equal(next.state.coins, 5); assert.equal(next.state.roundIndex, 2); assert.equal(next.state.handsRemaining, 6);
+  assert.equal(next.state.coins, 4); assert.equal(next.state.roundIndex, 2); assert.equal(next.state.handsRemaining, 6);
   assert.equal(next.state.roundHands, 6); assert.equal(next.upgrades.current.hands, 6);
   assert.deepEqual((await call('/runs', { body: {}, key: 'auto-create' })).data, created);
 });
@@ -367,4 +368,19 @@ test('Endless HTTP requires a won run and preserves opt-in, assets and idempoten
   assert.deepEqual((await call(`${root}/endless/start`,payload)).data,entered.data);
   assert.deepEqual((await call(root)).data.state,state);
   assert.equal((await call('/leaderboard')).data.entries[0].completedRounds,10);
+});
+
+test('rank details are public to authenticated players while private runs and unranked builds stay hidden', async t => {
+  const {call,otherToken}=await setup(t,{},raw=>{Object.assign(raw,currentRawRules());raw.balance.round.baseHands=1;raw.balance.round.roundTargets[0].targetScore='999999999999999999999999999';});
+  const created=(await call('/runs',{body:{},key:'rank-detail-create'})).data.state;
+  assert.equal((await call(`/leaderboard/${created.runId}`,{auth:otherToken})).status,404);
+  const final=(await call(`/runs/${created.runId}/spins`,{body:{expectedRevision:0},key:'rank-detail-spin'})).data;
+  assert.equal(final.state.phase,'RUN_FAILED');
+  const other=await call(`/leaderboard/${created.runId}`,{auth:otherToken});assert.equal(other.status,200);
+  assert.equal(other.data.snapshot.runTotalScore,final.state.runTotalScore);assert.deepEqual(other.data.snapshot.lastSpin.board,final.event.board);
+  assert.equal((await call(`/runs/${created.runId}`,{auth:otherToken})).status,404);
+  assert.equal((await call(`/leaderboard/${created.runId}`,{auth:null})).status,401);
+  assert.equal((await call(`/leaderboard/${created.runId}?revision=0`)).status,400);
+  assert.equal((await call(`/leaderboard/${created.runId}`,{body:{snapshot:{score:'999'}},key:'inject'})).status,404);
+  assert.doesNotMatch(JSON.stringify(other.data),/alice|initialSeed|rngBefore|randomTrace|owner_id|idempotencyKey/);
 });

@@ -4,7 +4,7 @@ import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { rules, rawRules, noLineBoard, randomForBoard, seed } from './helpers.js';
+import { v013Rules as rules, rawV013Rules as rawRules, noLineBoard, randomForBoard, seed } from './helpers.js';
 import { parseRules } from '../src/domain/rules.js';
 import { createRun, applyAction, canStartEndless } from '../src/domain/run.js';
 import { GameSession, restoreSession } from '../src/server/session.js';

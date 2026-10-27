@@ -1,5 +1,5 @@
 {
-  "version": "v0.13",
+  "version": "v0.14",
   "status": "prototype_values_not_final",
   "board": {
     "rows": 3,
@@ -159,7 +159,7 @@
     "clearRewardPerRound": 1
   },
   "shop": {
-    "slots": 4,
+    "slots": 5,
     "unlimitedPurchases": true,
     "firstPaidRerollPrice": 1,
     "rerollPriceIncreasePerPaidReroll": 1,
@@ -171,14 +171,30 @@
       "legendary": 3
     },
     "allowDuplicateIdsInSameOffer": false,
-    "basePermanentItemSlots": 8,
+    "basePermanentItemSlots": 4,
     "baseLimitedItemSlots": 2,
     "discountPriceFloor": 1,
     "offerSelection": "rarity_then_uniform_without_replacement",
     "excludeFullInventoryItems": false,
     "allowPreviousOfferItems": true,
     "emptySlotsOnPoolExhaustion": true,
-    "vipActivation": "next_round"
+    "vipActivation": "next_round",
+    "upgradeItemIds": [
+      "cherry_farm",
+      "lemon_orchard",
+      "bell_foundry",
+      "gem_mine",
+      "sevens_blessing",
+      "golden_harvest",
+      "lemon_syrup",
+      "resonance_hammer",
+      "gem_appraiser",
+      "lucky_crown"
+    ],
+    "offerGroups": {
+      "upgrade": 2,
+      "item": 3
+    }
   },
   "itemRules": {
     "oneBoardModifierPerHand": true,

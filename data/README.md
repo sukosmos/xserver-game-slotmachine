@@ -25,3 +25,6 @@ v0.11의 `round.milestoneCards`는 등장 라운드와3개 효과를 정의한�
 v0.12: `consumableActivation`과 소모 효과의 `triggerPolicy`로 라운드당1회/남은 Hand 역수 추첨을 정의한다. `lastTriggeredRound`는 서버 아이템 인스턴스에 기록한다. 비상 레버70%는 정확한 `minimumTargetRatio`, 뻥튀기는 `spin_multiplier.factor`, 전체 강화는 `spinFactor`, 돈벼락은 `grant_coins.coins=30`, 카드 수는 `offerCount=4`로 정의한다. 기본 보상은4다.
 # v0.13 Endless
 `balance.round.endless`가 있는 규칙은10라운드 승리 이후 명시적으로 Endless를 시작할 수 있다. `targetGrowth`19/10과 `targetRounding`ceil은 이후 목표에만 적용한다. 스핀 점수·다중 라인 배당에는 자동 성장 배율을 추가하지 않는다. 저장된 이전 규칙은 기존 종료 정책을 유지한다.
+
+## v0.14
+`shop.upgradeItemIds`의 기본 강화10종은 영구/제한칸을 사용하지 않는다. 영구4/제한2/강화 무제한. `shop.offerGroups`는 강화2/일반3칸을 지정한다. 아이템 효과·가격·중첩 한도와 목표/보상은 직전 JSON과 동일하다.

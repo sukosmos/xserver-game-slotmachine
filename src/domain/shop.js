@@ -1,6 +1,6 @@
 import { requireCondition } from './errors.js';
 import { getItem } from './rules.js';
-import { acquireItem, discardItem, validateItems, activeItems } from './inventory.js';
+import { acquireItem, discardItem, validateItems, activeItems, inventoryGroup } from './inventory.js';
 import { assertCoins, safeAmount } from './money.js';
 import { createWeightedTable, drawSymbol } from './slot.js';
 import { drawInt } from './random-draw.js';
@@ -24,17 +24,21 @@ export function createShop(state, rules, rng, { offerSequence = 0, paidRerolls =
   const randomTrace = [];
   const slots = Array.from({ length: rules.balance.shop.slots }, (_, index) => {
     const slotId = `round-${state.roundIndex}-offer-${offerSequence}-slot-${index}`;
-    if (pool.length === 0) return { slotId, itemId: null, soldOut: false };
+    const groups = rules.balance.shop.offerGroups;
+    const group = groups ? (index < groups.upgrade ? 'upgrade' : 'item') : null;
+    const meta = group ? { group } : {};
+    const eligible = group ? pool.filter(item => (inventoryGroup(item, rules) === 'upgrade') === (group === 'upgrade')) : pool;
+    if (eligible.length === 0) return { slotId, itemId: null, soldOut: false, ...meta };
     const rarityWeights = ['common', 'rare', 'epic', 'legendary']
-      .filter((rarity) => pool.some((item) => item.rarity === rarity))
+      .filter((rarity) => eligible.some((item) => item.rarity === rarity))
       .map((id) => ({ id, weight: rules.balance.shop.rarityWeight[id] }));
     const rarity = drawSymbol(createWeightedTable(rarityWeights), {
       nextInt: (bound) => drawInt(rng, bound, randomTrace, { purpose: 'shop_rarity', slotId }),
     });
-    const options = pool.filter((item) => item.rarity === rarity);
+    const options = eligible.filter((item) => item.rarity === rarity);
     const selected = options[drawInt(rng, options.length, randomTrace, { purpose: 'shop_item', slotId })];
     pool = pool.filter((item) => item.id !== selected.id);
-    return { slotId, itemId: selected.id, soldOut: false };
+    return { slotId, itemId: selected.id, soldOut: false, ...meta };
   });
   return { shop: { slots, offerSequence, paidRerolls, freeRerollsUsed }, randomTrace };
 }
@@ -95,7 +99,7 @@ export function getShopView(state, rules) {
     offerSequence: state.shop.offerSequence, paidRerolls: state.shop.paidRerolls, freeRerollsUsed: state.shop.freeRerollsUsed,
     freeRerollsRemaining: reroll.freeRerollsRemaining, rerollPrice: reroll.price,
     canReroll: reroll.canReroll, rerollBlockedReason: reroll.blockedReason,
-    slots: state.shop.slots.map(({ slotId, itemId, soldOut }) => ({ slotId, itemId, soldOut, ...purchaseQuote(state, { itemId, soldOut }, rules) })),
+    slots: state.shop.slots.map(({ slotId, itemId, soldOut, group }) => ({ slotId, itemId, soldOut, ...(group ? { group } : {}), ...purchaseQuote(state, { itemId, soldOut }, rules) })),
   };
 }
 

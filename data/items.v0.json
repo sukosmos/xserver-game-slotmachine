@@ -1,5 +1,5 @@
 {
-  "version": "v0.13",
+  "version": "v0.14",
   "chanceUnits": "basis_points: 10000 = 100%",
   "items": [
     {
@@ -66,7 +66,7 @@
       "id": "sevens_blessing",
       "nameKo": "세븐의 축복",
       "rarity": "rare",
-      "price": 4,
+      "price": 3,
       "category": "weight",
       "slot": "permanent",
       "maxStacks": 5,
@@ -153,7 +153,7 @@
       "id": "lucky_crown",
       "nameKo": "행운의 왕관",
       "rarity": "rare",
-      "price": 4,
+      "price": 3,
       "category": "payout",
       "slot": "permanent",
       "maxStacks": null,
@@ -217,14 +217,14 @@
       "id": "scammers_card",
       "nameKo": "사기꾼의 카드",
       "rarity": "rare",
-      "price": 4,
+      "price": 5,
       "category": "score",
       "slot": "charged",
       "maxStacks": 1,
       "effect": {
         "kind": "virtual_cherry_line_bonus",
         "condition": "at_least_one_incomplete_final_line",
-        "fixedPoints": 30,
+        "fixedPoints": 500,
         "countsAsRealWinningLine": false,
         "triggerPolicy": "remaining_hands_once_per_round"
       },

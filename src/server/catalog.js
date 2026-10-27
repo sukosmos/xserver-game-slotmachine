@@ -1,3 +1,4 @@
+import { inventoryGroup } from '../domain/inventory.js';
 import { createRun } from '../domain/run.js';
 import { percent } from './display.js';
 import { upgradeView } from './upgrades.js';
@@ -50,10 +51,11 @@ export function publicCatalog(rules) {
     rulesVersion: rules.rulesVersion, maxRounds: rules.balance.round.maxRoundMvp, baseHands: rules.balance.round.baseHands, targets: rules.targets.map(String),
     ...(rules.balance.round.endless ? { endless: rules.balance.round.endless } : {}),
     permanentSlots: rules.balance.shop.basePermanentItemSlots, limitedSlots: rules.balance.shop.baseLimitedItemSlots,
+    ...(rules.balance.shop.upgradeItemIds ? { upgradeItemIds: rules.balance.shop.upgradeItemIds, offerGroups: rules.balance.shop.offerGroups } : {}),
     startingCoins: rules.balance.economy.startingCoins,
     symbols: rules.symbols.map((s) => ({ id: s.id, name: names[s.id], basePoint: s.basePoint.toString(), linePayout: s.linePayout.toString() })),
     lines: rules.lines,
-    items: rules.catalog.items.filter((item) => isItemEnabled(item, rules)).map((item) => ({ ...item, description: describeItem(item), summary: summarizeItem(item) })),
+    items: rules.catalog.items.filter((item) => isItemEnabled(item, rules)).map((item) => ({ ...item, inventoryGroup: inventoryGroup(item, rules), description: describeItem(item), summary: summarizeItem(item) })),
   };
 }
 

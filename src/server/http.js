@@ -124,6 +124,8 @@ export function createGameServer({ store, authenticate = (token) => store.authen
       if (req.method === 'GET' && url.pathname === `${base}/runs`) { send(200, store.listRuns(userId, listLimit(url))); return; }
       if (req.method === 'GET' && url.pathname === `${base}/leaderboard`) { send(200, store.leaderboard(listLimit(url))); return; }
       requireCondition(url.search === '', 'INVALID_QUERY');
+      const rankDetail = url.pathname.match(/^\/api\/game\/v1\/leaderboard\/([A-Za-z0-9_-]{1,128})$/);
+      if (req.method === 'GET' && rankDetail) { send(200, store.leaderboardDetail(rankDetail[1])); return; }
       if (req.method === 'GET' && url.pathname === `${base}/me`) { send(200, { playerId: store.playerId(userId) }); return; }
       if (req.method === 'GET' && url.pathname === `${base}/catalog`) { send(200, store.catalog(userId)); return; }
       if (req.method === 'POST' && url.pathname === `${base}/runs`) {
@@ -147,7 +149,7 @@ export function createGameServer({ store, authenticate = (token) => store.authen
       let status = badRequest.has(code) ? 400 : conflicts.has(code) ? 409 : 500;
       if (code === 'UNAUTHENTICATED') { status = 401; res.setHeader('WWW-Authenticate', 'Bearer'); }
       if (code === 'UNTRUSTED_ORIGIN') status = 403;
-      if (['RUN_NOT_FOUND', 'NOT_FOUND'].includes(code)) status = 404;
+      if (['RUN_NOT_FOUND', 'RANK_NOT_FOUND', 'NOT_FOUND'].includes(code)) status = 404;
       if (code === 'RATE_LIMITED') { status = 429; res.setHeader('Retry-After', Math.ceil(windowMs / 1000)); }
       if (code === 'BODY_TOO_LARGE') status = 413;
       if (['REQUEST_TIMEOUT', 'REQUEST_ABORTED'].includes(code)) status = 408;
