@@ -34,5 +34,4 @@ who's gonna install this repository to your server, please consider below.
 | `src/server/http.js` | 인증된 REST API, 입력/크기/시간/요청 빈도 검증 |
 | `src/domain/ranking.js` | 완료 라운드·BigInt 점수·종료 시각 비교 |
 | `test/` | 슬롯·상태 전환·오류·재현·사양·분포 테스트 |
-명 문서는 이를 풀어쓴 것.
-- 숫자는 **초기 프로토타입 값**이며 플레이테스트 후 조정 가능. 임의 변경 시 데이터·테스트·문서를 함께 갱신.
+
