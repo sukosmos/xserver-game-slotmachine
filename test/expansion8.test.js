@@ -7,7 +7,7 @@ import { createInventory, acquireItem, discardItem, inventoryUsage, inventoryLim
 import { createRun, applyAction } from '../src/domain/run.js';
 import { scoreWithItems } from '../src/domain/item-scoring.js';
 import { spinWithItems, candidateLines } from '../src/domain/items.js';
-import { buyItem, createShop, getShopView } from '../src/domain/shop.js';
+import { buyItem, createShop, getShopView, rerollShop } from '../src/domain/shop.js';
 import { calculateClearReward } from '../src/domain/economy.js';
 import { procChance } from '../src/domain/expansion8.js';
 import { GameSession, restoreSession } from '../src/server/session.js';
@@ -18,11 +18,15 @@ const inventory = (...ids) => ids.reduce((s,id)=>acquireItem(s,id,rules,{activeF
 const shop = (id, ids=[], overrides={}) => ({...createRun(rules,{initialItemIds:ids}),phase:'SHOP',roundIndex:5,coins:100,shop:{slots:[{slotId:'offer',itemId:id,soldOut:false}],paidRerolls:0,freeRerollsUsed:0,offerSequence:0},...overrides});
 const spin = (ids, board=noLineBoard, extra=[], state={}) => spinWithItems(rules,randomForBoard(board,rules,extra),{...createRun(rules,{initialItemIds:ids}),...state});
 
-test('v0.15 appends exactly eight items and preserves all 37 existing definitions',()=>{
+test('v0.15 appends exactly eight items and preserves existing effects alongside current price tuning',()=>{
  const prior=fixture('rules-v014');const source=fixture('expansion8-catalog');
  assert.equal(rules.catalog.items.length,45);
+ // Historical replay fixtures keep their original prices; the live catalog has since been tuned.
+ prior.catalog.items.find(i=>i.id==='compound_magic').price=3;
+ prior.catalog.items.find(i=>i.id==='haggler').price=7;
  assert.deepEqual(rules.catalog.items.slice(0,37),prior.catalog.items);
- for(const i of source.items){const actual=rules.itemsById[i.id];assert.equal(actual.price,i.id==='hootie_fruitie'?10:i.price);assert.equal(actual.rarity,i.id==='hootie_fruitie'?'legendary':i.rarity);if(i.id==='rock_bottom'){assert.equal(actual.effect.kind,'bonus_once_if_physical_symbol_present');assert.equal(actual.effect.bonusMultiplier,100);assert.equal(actual.effect.maxAwardsPerSpin,1);}else assert.deepEqual(actual.effect,i.id==='help_hand'?{...i.effect,protectCompletedLines:true}:i.effect);}
+ const tuned={hootie_fruitie:{price:10,rarity:'legendary'},midas_hand:{price:6,rarity:'epic'}};
+ for(const i of source.items){const actual=rules.itemsById[i.id];assert.equal(actual.price,tuned[i.id]?.price??i.price);assert.equal(actual.rarity,tuned[i.id]?.rarity??i.rarity);if(i.id==='rock_bottom'){assert.equal(actual.effect.kind,'bonus_once_if_physical_symbol_present');assert.equal(actual.effect.bonusMultiplier,100);assert.equal(actual.effect.maxAwardsPerSpin,1);}else assert.deepEqual(actual.effect,i.id==='help_hand'?{...i.effect,protectCompletedLines:true}:i.effect);}
  const svg=readFileSync(new URL('../web/icons.svg',import.meta.url),'utf8');
  for(const i of source.items) assert.equal([...svg.matchAll(new RegExp(`id="${i.id}"`,'g'))].length,1);
 });
@@ -67,6 +71,24 @@ test('hootie applies after same-symbol upgrades and uses physical base symbols w
  assert.equal(boosted.baseScore,63n);assert.equal(boosted.winningLines[0].score,270n);
  const wild=scoreWithItems(['cherry','diamond','cherry',...noLineBoard.slice(3)],rules,inventory('hootie_fruitie').items,{wildMarks:[1]});
  assert.equal(wild.winningLines[0].score,90n);
+});
+test('hootie unlocks at the round 6 shop, including rerolls and server-side purchase validation', () => {
+ assert.equal(rules.itemsById.hootie_fruitie.minShopRound, 6);
+ for (const roundIndex of [1, 2, 3, 4, 5, 6, 7]) {
+  const before = shop('hootie_fruitie', [], { roundIndex });
+  const allowed = roundIndex >= 6;
+  assert.equal(getShopView(before, rules).slots[0].canBuy, allowed);
+  if (allowed) assert.equal(buyItem(before, 'offer', rules).state.items.at(-1).itemId, 'hootie_fruitie');
+  else assert.throws(() => buyItem(before, 'offer', rules), { code: 'ITEM_NOT_AVAILABLE' });
+  // Highest rarity and last candidate selects Hootie when it is available.
+  const rng = { nextInt: bound => bound - 1 };
+  const generated = createShop(before, rules, rng).shop;
+  assert.equal(generated.slots.some(s => s.itemId === 'hootie_fruitie'), allowed);
+  const rerolled = rerollShop({ ...before, shop: generated }, rules, rng).state.shop;
+  assert.equal(rerolled.slots.some(s => s.itemId === 'hootie_fruitie'), allowed);
+ }
+ const old = rawRules(); old.catalog.items.find(i => i.id === 'hootie_fruitie').minShopRound = 1;
+ assert.equal(buyItem(shop('hootie_fruitie', [], { roundIndex: 1 }), 'offer', parseRules(old)).state.items.at(-1).itemId, 'hootie_fruitie');
 });
 test('help hand edits one uniform candidate before other modifiers and persists for every hand of its round',()=>{
  const board=['cherry','cherry','diamond','bell','lemon','seven','diamond','bell','lemon'];

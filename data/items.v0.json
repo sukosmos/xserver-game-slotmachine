@@ -820,7 +820,7 @@
       },
       "category": "score",
       "slot": "permanent",
-      "minShopRound": 1,
+      "minShopRound": 6,
       "uniquePerRun": true
     }
   ]

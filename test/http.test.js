@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { request } from 'node:http';
 import { randomBytes } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { GameStore } from '../src/server/store.js';
@@ -171,11 +171,18 @@ test('card choice HTTP hides the order, validates ownership and commits exactly 
 
 test('static allowlist serves the game with CSP and never serves source or private files', async (t) => {
   const { url, call, token } = await setup(t);
-  for (const path of ['/', '/app.js', '/client.js', '/format.js', '/spin-animation.js', '/styles.css', '/icons.svg']) {
+  for (const path of ['/', '/app.js', '/client.js', '/format.js', '/spin-animation.js', '/spin-audio.js', '/render.js', '/styles.css', '/icons.svg']) {
     const result = await fetch(url + path);
     assert.equal(result.status, 200); assert.match(result.headers.get('content-security-policy'), /script-src 'self'/);
     assert.ok((await result.text()).length > 100);
   }
+  const audio = await fetch(url + '/audio/spin-start.wav');
+  assert.equal(audio.status, 200);
+  assert.equal(audio.headers.get('content-type'), 'audio/wav');
+  assert.deepEqual(Buffer.from(await audio.arrayBuffer()), readFileSync(new URL('../web/audio/spin-start.wav', import.meta.url)));
+  const audioHead = await fetch(url + '/audio/spin-start.wav', { method: 'HEAD' });
+  assert.equal(audioHead.status, 200);
+  assert.equal(await audioHead.text(), '');
   for (const path of ['/.runtime/master.key', '/src/server/store.js', '/package.json', '/data/balance.json']) {
     assert.notEqual((await fetch(url + path)).status, 200);
   }
