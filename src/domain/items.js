@@ -1,3 +1,6 @@
+import { expansionContracts, hasExpansion } from './expansion-contract.js';
+import { hasEffect, procDetails } from './expansion8.js';
+import { safeAmount } from './money.js';
 import { getItem } from './rules.js';
 import { requireCondition } from './errors.js';
 import { exactInteger } from './exact.js';
@@ -6,9 +9,10 @@ import { weightedSymbols, scoreWithItems } from './item-scoring.js';
 import { createWeightedTable, drawBoard, drawSymbol, evaluateLines, validateBoard } from './slot.js';
 import { hasSelected8, nextHandSequence, dueWeightBuffs, queueWeightBuffs } from './selected8.js';
 import { selected8Contracts } from './selected8-contract.js';
-import { hasMilestone, scoringItems, milestoneWildActive, rewardSpinFactor } from './milestone.js';
+import { hasMilestone, scoringItems, milestoneWildActive, rewardSpinFactor, removedSymbol as removedMilestoneSymbol } from './milestone.js';
 
 const spinKinds = new Set([
+  ...Object.keys(expansionContracts),
   'weight_add', 'symbol_line_add_factor', 'random_candidate_edit', 'wild_center', 'reroll_last_column',
   'virtual_cherry_line_bonus', 'convert_random_nonseven_to_seven', 'best_candidate_edit',
   'spin_multiplier_if_min_real_lines', 'conditional_per_line_factor', 'zero_base_plus_per_real_line_factor', 'consecutive_win_multiplier',
@@ -41,7 +45,7 @@ export function spinWithItems(rules, rng, state = {}) {
   const extended = hasSelected8(rules);
   const active = activeItems(items, rules, roundIndex);
   const eligible = active.filter((instance) => !getItem(rules,instance.itemId).effect.triggerPolicy || instance.lastTriggeredRound !== roundIndex);
-  const removedSymbol = state.milestoneReward?.removedSymbol;
+  const removedSymbol = removedMilestoneSymbol(state);
   const milestoneWild = Boolean(milestoneWildActive(state,rules));
   const spinFactor = rewardSpinFactor(state,rules);
   for (const instance of active) {
@@ -69,15 +73,32 @@ export function spinWithItems(rules, rng, state = {}) {
     triggeredItems.push({ instanceId: instance.instanceId, itemId: instance.itemId, kind: getItem(rules, instance.itemId).effect.kind, ...details });
   };
   const succeeds = (instance, purpose) => {
+    const kaiji = hasEffect(active,rules,'modify_item_proc_chances');
     const effect = getItem(rules,instance.itemId).effect;
     if (effect.triggerPolicy) {
       const remaining = state.handsRemaining ?? state.roundHands ?? rules.balance.round.baseHands;
       const bound = Math.min(remaining, instance.remainingSpins ?? remaining);
       requireCondition(Number.isSafeInteger(bound) && bound > 0, 'NO_HANDS_LEFT');
-      return draw(bound,purpose,instance.instanceId) === 0;
+      if (!kaiji || bound === 1) return draw(bound,purpose,instance.instanceId) === 0;
+      const info = procDetails(Math.floor(10000 / bound), active, rules);
+      const roll = draw(10000,purpose,instance.instanceId);
+      Object.assign(randomTrace.at(-1), info, {roll});
+      return roll < info.effectiveBp;
     }
-    return draw(10000,purpose,instance.instanceId) < effect.triggerChanceBasisPoints;
+    const roll = draw(10000,purpose,instance.instanceId);
+    if (!kaiji) return roll < effect.triggerChanceBasisPoints;
+    const info = procDetails(effect.triggerChanceBasisPoints,active,rules);
+    Object.assign(randomTrace.at(-1),info,{roll});
+    return roll < info.effectiveBp;
   };
+  const helper = active.find(i=>getItem(rules,i.itemId).effect.kind === 'complete_one_random_two_match_line');
+  if (helper) {
+    const candidates = candidateLines(board,rules);
+    if (candidates.length) {
+      const selected = candidates[draw(candidates.length,'candidate_selection',helper.instanceId)];
+      board = edit(board,selected); trigger(helper,selected);
+    }
+  }
   // Reserve scheduled center wild before candidate previews so preview and payout agree.
   const wildItems = eligible.filter((instance) => {
     const effect = getItem(rules,instance.itemId).effect;
@@ -104,12 +125,12 @@ export function spinWithItems(rules, rng, state = {}) {
     }
     return bonus;
   }
-  const preview = (candidateBoard) => scoreWithItems(candidateBoard, rules, scoringActive, { consecutiveWinHands, wildMarks, spinFactor, virtualScore: virtualBonus(candidateBoard), physicalChanged: changed(candidateBoard) }).spinScore;
+  const preview = (candidateBoard) => scoreWithItems(candidateBoard, rules, scoringActive, { consecutiveWinHands, wildMarks, spinFactor, doublesArmed:state.doublesArmedForNextHand, virtualScore: virtualBonus(candidateBoard), physicalChanged: changed(candidateBoard) }).spinScore;
   const priorities = rules.balance.itemRules.boardModifierPriority;
   const modifiers = eligible.filter((instance) => getItem(rules, instance.itemId).effect.boardPriority !== undefined).sort((a, b) => {
     return priorities.indexOf(getItem(rules, a.itemId).effect.boardPriority) - priorities.indexOf(getItem(rules, b.itemId).effect.boardPriority) || acquisitionOrder(a, b);
   });
-  for (const instance of modifiers) {
+  for (const instance of changed(board) ? [] : modifiers) {
     const effect = getItem(rules, instance.itemId).effect;
     let candidates;
     let selected;
@@ -167,16 +188,21 @@ export function spinWithItems(rules, rng, state = {}) {
     const effect = getItem(rules, instance.itemId).effect;
     if (effect.kind !== 'place_random_temporary_wild_mark') continue;
     const candidates = board.flatMap((_, i) => wildMarks.includes(i) ? [] : [i]);
-    if (!candidates.length || draw(10000, 'wild_trigger', instance.instanceId) >= effect.triggerChanceBasisPoints) continue;
+    if (!candidates.length || !succeeds(instance,'wild_trigger')) continue;
     const index = candidates[draw(candidates.length, 'wild_selection', instance.instanceId)];
     wildMarks.push(index); trigger(instance, { index });
   }
   wildMarks.sort((a, b) => a - b);
   const virtualScore = virtualBonus(board, true);
-  const scoring = scoreWithItems(board, rules, scoringActive, { consecutiveWinHands, virtualScore, lineBonus, wildMarks, spinFactor, physicalChanged: changed(board) });
+  const scoring = scoreWithItems(board, rules, scoringActive, { consecutiveWinHands, virtualScore, lineBonus, wildMarks, spinFactor, doublesArmed:state.doublesArmedForNextHand, physicalChanged: changed(board) });
   const handSequence = extended ? nextHandSequence(state) : null;
   return {
     rawBoard, board, ...scoring, triggeredItems, randomTrace,
+    ...(hasExpansion(rules) ? {
+      doublesArmedForNextHand:hasEffect(active,rules,'double_next_actual_hand_after_no_line') && scoring.winningLines.length === 0,
+      midasDiamondCountThisRound:hasEffect(active,rules,'coin_on_round_clear_per_physical_symbol_count')
+        ? safeAmount(BigInt(state.midasDiamondCountThisRound ?? 0) + BigInt(board.filter(s=>s==='diamond').length)) : 0,
+    } : {}),
     ...(extended ? { wildMarks, physicalChanged: changed(board), handSequence, consumedWeightBuffs,
       pendingNextHandWeightBuffs: queueWeightBuffs(board, active, rules, handSequence, removedSymbol) } : {}),
     ...(hasMilestone(rules) ? { milestoneWild } : {}),

@@ -310,3 +310,33 @@ test('windfall pays exactly thirty coins once across connections and disk restar
  const second=open();assert.deepEqual(second.execute('alice',id,command),result);assert.throws(()=>second.execute('alice',id,{...command,idempotencyKey:'second-choice'}),{code:'STALE_REVISION'});
  store.close();second.close();const restarted=open();assert.deepEqual(restarted.getRun('alice',id).state,result.state);assert.deepEqual(restarted.execute('alice',id,command),result);
 });
+
+test('v0.14 disk saves retain their original catalog while v0.15 adds expansion items', t=>{
+ const old=parseRules(JSON.parse(readFileSync(new URL('./fixtures/rules-v014.json',import.meta.url),'utf8')));
+ const {store,open}=fixture(t,old);const created=store.createRun('alice','old');const id=created.state.runId;
+ const result=store.execute('alice',id,cmd('SPIN',0));store.close();
+ const next=open({rules:currentRules});assert.deepEqual(next.getRun('alice',id).state,result.state);
+ assert.deepEqual(next.execute('alice',id,cmd('SPIN',0)),result);
+ assert.equal(next.catalog('alice',id).items.length,37);assert.equal(next.catalog('alice').items.length,45);
+ assert.equal(next.createRun('alice','new').state.rulesVersion,'v0.15');
+});
+
+test('Emil and bag purchases survive SQLite restart, retries and rank snapshot creation', t=>{
+ const raw=structuredClone({balance:currentRules.balance,lines:currentRules.lineDefinitions,catalog:currentRules.catalog});
+ raw.balance.economy.startingCoins=100;raw.balance.round.roundTargets.forEach(r=>r.targetScore='1');
+ const ids=new Set([...raw.balance.shop.upgradeItemIds,'survival_bag','emils_shop']);raw.catalog.items=raw.catalog.items.filter(i=>ids.has(i.id));
+ const {store,open}=fixture(t,parseRules(raw));let active=store,state=active.createRun('alice','expansion').state;
+ const runId=state.runId,act=(type,extra={})=>{const result=active.execute('alice',runId,cmd(type,state.revision,extra));state=result.state;return result;};
+ for(let round=1;round<=5;round++){
+   act('SPIN');if(state.phase==='CARD_CHOICE')act('CHOOSE_CARD',{slotId:state.cardChoice.slots[0].slotId});
+   if(round===1){act('BUY',{slotId:state.shop.slots.find(o=>o.itemId==='survival_bag').slotId});assert.deepEqual(state.inventoryLimits,{permanent:6,limited:3});}
+   if(round<5)act('CONTINUE');
+ }
+ const offer=state.shop.slots.find(o=>o.itemId==='emils_shop');const command=cmd('BUY_DESTINY',state.revision,{slotId:offer.slotId,selectedDestinyCardId:offer.destinyChoices[0].cardId});
+ const bought=active.execute('alice',runId,command);state=bought.state;active.close();active=open();
+ assert.deepEqual(active.getRun('alice',runId).state,state);assert.deepEqual(active.execute('alice',runId,command),bought);
+ assert.equal(state.milestoneRewards.length,2);assert.deepEqual(state.inventoryLimits,{permanent:6,limited:3});
+ for(let round=6;round<=10;round++){act('CONTINUE');act('SPIN');}
+ const snap=active.leaderboardDetail(runId).snapshot;assert.equal(snap.build.milestoneRewards.length,2);assert.equal(snap.permanentSlots,6);
+ active.close();active=open();assert.deepEqual(active.leaderboardDetail(runId).snapshot,snap);
+});

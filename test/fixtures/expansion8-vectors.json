@@ -1,0 +1,206 @@
+{
+  "version": "v0.7-proposed8",
+  "fixtures": [
+    {
+      "id": "BAG-01",
+      "itemId": "survival_bag",
+      "given": {
+        "permanentSlots": 8,
+        "limitedSlots": 2,
+        "occupiedPermanent": 8,
+        "occupiedLimited": 2,
+        "ownedSurvivalBags": 0
+      },
+      "expect": {
+        "permanentSlots": 10,
+        "limitedSlots": 3,
+        "survivalBagOccupancy": 0
+      }
+    },
+    {
+      "id": "ROCK-01",
+      "itemId": "rock_bottom",
+      "given": {
+        "finalPhysicalBoard": [
+          "cherry",
+          "diamond",
+          "lemon",
+          "seven",
+          "bell",
+          "cherry",
+          "diamond",
+          "lemon",
+          "bell"
+        ],
+        "diamondRawBaseScore": 5,
+        "factor": 100
+      },
+      "expect": {
+        "diamondCount": 2,
+        "specialFlatBonus": "1000"
+      }
+    },
+    {
+      "id": "EMIL-01",
+      "itemId": "emils_shop",
+      "given": {
+        "upcomingRound": 6,
+        "coins": 10,
+        "eligibleDestinyIds": [
+          "fixture_card_a",
+          "fixture_card_b"
+        ],
+        "selectedCardId": "fixture_card_b"
+      },
+      "expect": {
+        "coinsAfter": 0,
+        "grantedDestinyId": "fixture_card_b",
+        "itemInventoryEntry": false
+      }
+    },
+    {
+      "id": "HELP-01",
+      "itemId": "help_hand",
+      "given": {
+        "board": [
+          "cherry",
+          "cherry",
+          "diamond",
+          "bell",
+          "lemon",
+          "seven",
+          "diamond",
+          "bell",
+          "lemon"
+        ],
+        "chosenCandidate": {
+          "lineId": "row_top",
+          "changeIndex": 2,
+          "newSymbol": "cherry"
+        }
+      },
+      "expect": {
+        "newBoard": [
+          "cherry",
+          "cherry",
+          "cherry",
+          "bell",
+          "lemon",
+          "seven",
+          "diamond",
+          "bell",
+          "lemon"
+        ],
+        "physicalChanged": true,
+        "newWinningLinesContains": [
+          "row_top"
+        ]
+      }
+    },
+    {
+      "id": "KAIJI-01",
+      "itemId": "kaijis_dice",
+      "given": {
+        "baseChanceBasisPoints": 800,
+        "kaiji": true,
+        "modulator": false
+      },
+      "expect": {
+        "effectiveChanceBasisPoints": 1200
+      }
+    },
+    {
+      "id": "KAIJI-02",
+      "itemId": "kaijis_dice",
+      "given": {
+        "baseChanceBasisPoints": 1000,
+        "kaiji": true,
+        "modulator": true,
+        "modulatorEligible": true
+      },
+      "expect": {
+        "effectiveChanceBasisPoints": 2000
+      }
+    },
+    {
+      "id": "MIDAS-01",
+      "itemId": "midas_hand",
+      "given": {
+        "diamondCountsPerHand": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "clear": true
+      },
+      "expect": {
+        "totalDiamonds": 6,
+        "settlementBonusCoins": 3
+      }
+    },
+    {
+      "id": "MIDAS-02",
+      "itemId": "midas_hand",
+      "given": {
+        "diamondCountsPerHand": [
+          1,
+          2,
+          2,
+          1
+        ],
+        "clear": false
+      },
+      "expect": {
+        "settlementBonusCoins": 0
+      }
+    },
+    {
+      "id": "DOUBLE-01",
+      "itemId": "doubles",
+      "given": {
+        "previousActualWinningLineCount": 0,
+        "currentPreDoubleScore": "250"
+      },
+      "expect": {
+        "currentSpinScore": "500"
+      }
+    },
+    {
+      "id": "FRUIT-01",
+      "itemId": "hootie_fruitie",
+      "given": {
+        "board": [
+          "cherry",
+          "cherry",
+          "cherry",
+          "lemon",
+          "lemon",
+          "lemon",
+          "bell",
+          "diamond",
+          "seven"
+        ],
+        "otherItems": []
+      },
+      "expect": {
+        "baseScore": "45",
+        "lineScore": "270",
+        "spinScore": "315"
+      }
+    },
+    {
+      "id": "PULSE-01",
+      "itemId": null,
+      "given": {
+        "pulseActive": true,
+        "transitionStarts": true,
+        "nextScene": "SHOP"
+      },
+      "expect": {
+        "pulseVisibleDuringTransition": false,
+        "stalePulseCallbacks": 0
+      }
+    }
+  ]
+}

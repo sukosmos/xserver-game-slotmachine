@@ -1,5 +1,5 @@
 import { requireCondition } from '../domain/errors.js';
-import { inventoryGroup } from '../domain/inventory.js';
+import { inventoryGroup, inventoryLimits } from '../domain/inventory.js';
 import { getItem } from '../domain/rules.js';
 import { upgradeView } from './upgrades.js';
 import { describeItem, summarizeItem } from './catalog.js';
@@ -37,14 +37,14 @@ export function createRankSnapshot(audit, rules, record) {
     roundIndex: final.roundIndex, completedRounds: final.completedRounds, roundScore: final.roundScore,
     targetScore: final.targetScore, runTotalScore: final.runTotalScore, handsRemaining: final.handsRemaining,
     consecutiveWinHands: spin.consecutiveWinHands, coinsBeforeSpin: before.coins,
-    permanentSlots: rules.balance.shop.basePermanentItemSlots, limitedSlots: rules.balance.shop.baseLimitedItemSlots,
+    permanentSlots: inventoryLimits(before.items,rules).permanent, limitedSlots: inventoryLimits(before.items,rules).limited,
     hasUpgradeGroup: Boolean(rules.balance.shop.upgradeItemIds), build,
     items: [...groups.values()].map(item => ({ ...item, stacks: item.instances.length })),
     lastSpin: {
       board: spin.board, wildMarks: spin.wildMarks ?? (spin.milestoneWild || spin.activeEffects.some(e => e.kind === 'wild_center') ? [4] : []),
       baseScore: spin.baseScore, lineScore: spin.lineScore, virtualScore: spin.virtualScore,
-      patternScore: spin.patternScore ?? '0', spinScore: spin.spinScore, globalMultiplier: spin.globalMultiplier,
-      multiplier: `×${decimalRatio(spin.globalMultiplier)}`, winningLines: spin.winningLines.length,
+      specialFlatBonus: spin.specialFlatBonus ?? '0', doublesApplied: spin.doublesApplied ?? false, patternScore: spin.patternScore ?? '0', spinScore: spin.spinScore, globalMultiplier: spin.globalMultiplier,
+      multiplier: `×${decimalRatio(spin.globalMultiplier)}${spin.doublesApplied ? ' · 더블 ×2' : ''}`, winningLines: spin.winningLines.length,
     },
   };
 }

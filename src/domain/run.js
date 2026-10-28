@@ -1,3 +1,5 @@
+import { hasExpansion, finishExpansionRound } from './expansion8.js';
+import { getItem } from './rules.js';
 import { requireCondition } from './errors.js';
 import { spinWithItems } from './items.js';
 import { createInventory, acquireItem } from './inventory.js';
@@ -11,10 +13,11 @@ import { hasMilestone, createCardOffer, chooseMilestone, isWildReward } from './
 
 export function validateAction(action, code = 'INVALID_ACTION') {
   requireCondition(action !== null && typeof action === 'object' && !Array.isArray(action), code);
-  requireCondition(['SPIN', 'CLAIM', 'CONTINUE', 'BUY', 'REROLL', 'DISCARD', 'CHOOSE_CARD', 'START_ENDLESS'].includes(action.type), code);
+  requireCondition(['SPIN', 'CLAIM', 'CONTINUE', 'BUY', 'REROLL', 'DISCARD', 'CHOOSE_CARD', 'START_ENDLESS', 'BUY_DESTINY'].includes(action.type), code);
   const fields = ['type'];
-  if (['BUY', 'CHOOSE_CARD'].includes(action.type)) fields.push('slotId');
+  if (['BUY', 'CHOOSE_CARD', 'BUY_DESTINY'].includes(action.type)) fields.push('slotId');
   if (action.type === 'DISCARD') fields.push('instanceId');
+  if (action.type === 'BUY_DESTINY') fields.push('selectedDestinyCardId');
   requireCondition(Object.keys(action).length === fields.length && fields.every((field) => Object.hasOwn(action, field)), code);
   for (const field of fields.slice(1)) {
     requireCondition(typeof action[field] === 'string' && action[field].length > 0 && action[field].length <= 128, code);
@@ -34,6 +37,8 @@ export function createRun(rules, { initialItemIds = [] } = {}) {
     ...(rules.balance.round.maxExtraHands !== undefined ? { roundHands: hands } : {}),
     ...(hasSelected8(rules) ? { handSequence: 0, pendingNextHandWeightBuffs: [] } : {}),
     ...(hasMilestone(rules) ? { cardOffer:null, milestoneReward:null, roundWildAvailable:false } : {}),
+    ...(hasExpansion(rules) ? { purchasedUniqueItemIds:initialItemIds.filter(id=>getItem(rules,id).uniquePerRun),
+      additionalMilestoneRewards:[], doublesArmedForNextHand:false, midasDiamondCountThisRound:0 } : {}),
     ...inventory, consecutiveWinHands: 0, coins: rules.balance.economy.startingCoins, shop: null,
   };
 }
@@ -57,6 +62,7 @@ function nextTarget(state, rules) {
 
 function completeRound(state, rules, rng) {
   const { settlement, randomTrace } = calculateClearReward(state, rules, rng);
+  const expiredItems = finishExpansionRound(state,rules);
   state.coins = settlement.coinsAfterReward;
   state.completedRounds = state.roundIndex;
   state.phase = state.roundIndex === rules.balance.round.maxRoundMvp && state.mode !== 'endless' ? 'RUN_WON' : 'SHOP';
@@ -75,7 +81,7 @@ function completeRound(state, rules, rng) {
     state.shop = offer.shop;
     randomTrace.push(...offer.randomTrace);
   }
-  return { settlement, randomTrace };
+  return { settlement, randomTrace, expiredItems };
 }
 
 /**
@@ -100,6 +106,10 @@ export function applyAction(previous, action, rules, rng) {
     const { randomTrace: draws, ...result } = spinWithItems(rules, rng, state);
     randomTrace = draws;
     state.items = result.itemsAfterSpin;
+    if (hasExpansion(rules)) {
+      state.doublesArmedForNextHand = result.doublesArmedForNextHand;
+      state.midasDiamondCountThisRound = result.midasDiamondCountThisRound;
+    }
     state.consecutiveWinHands = result.consecutiveWinHands;
     state.handsRemaining -= 1;
     state.roundScore += result.spinScore;
@@ -120,8 +130,9 @@ export function applyAction(previous, action, rules, rng) {
       if (state.roundScore >= state.targetScore || rescued.emergency?.type === 'EMERGENCY_ROUND_CLEARED') {
         const cleared = completeRound(state, rules, rng);
         settlement = cleared.settlement;
+        if (hasExpansion(rules)) { result.expiredItems.push(...cleared.expiredItems); result.itemsAfterSpin = state.items; }
         randomTrace.push(...cleared.randomTrace);
-      } else { state.phase = 'RUN_FAILED'; state.items = []; state.coins = 0; state.shop = null; if (hasSelected8(rules)) state.pendingNextHandWeightBuffs = []; }
+      } else { if (hasExpansion(rules)) { result.expiredItems.push(...finishExpansionRound(state,rules)); state.doublesArmedForNextHand = false; } state.phase = 'RUN_FAILED'; state.items = []; state.coins = 0; state.shop = null; if (hasSelected8(rules)) state.pendingNextHandWeightBuffs = []; }
     }
     event = {
       type: 'SPIN_RESOLVED', ...result, settlement,
@@ -147,6 +158,7 @@ export function applyAction(previous, action, rules, rng) {
     state.targetScore = nextTarget(state, rules);
     state.roundIndex += 1;
     state.roundScore = 0n;
+    if (hasExpansion(rules)) state.midasDiamondCountThisRound = 0;
     state.handsRemaining = roundHands(rules, state.items, state.roundIndex);
     if (rules.balance.round.maxExtraHands !== undefined) state.roundHands = state.handsRemaining;
     if (hasMilestone(rules)) state.roundWildAvailable = isWildReward(state, rules);
@@ -159,7 +171,8 @@ export function applyAction(previous, action, rules, rng) {
     const offer = createShop(state, rules, rng);
     state.shop = offer.shop; randomTrace.push(...offer.randomTrace);
   } else {
-    const result = action.type === 'BUY' ? buyItem(state, action.slotId, rules)
+    if (action.type === 'BUY_DESTINY') requireCondition(hasExpansion(rules), 'INVALID_ACTION');
+    const result = action.type === 'BUY' || action.type === 'BUY_DESTINY' ? buyItem(state, action.slotId, rules, {selectedDestinyCardId:action.selectedDestinyCardId,rng})
       : action.type === 'DISCARD' ? discardShopItem(state, action.instanceId, rules)
         : rerollShop(state, rules, rng);
     state = result.state;

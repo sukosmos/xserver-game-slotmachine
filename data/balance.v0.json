@@ -1,5 +1,5 @@
 {
-  "version": "v0.14",
+  "version": "v0.15",
   "status": "prototype_values_not_final",
   "board": {
     "rows": 3,
@@ -214,7 +214,8 @@
     "bestCandidateVirtualRolls": "shared_lazy_per_spin",
     "consecutiveWinsCarryAcrossRounds": true,
     "selected8Items": true,
-    "consumableActivation": "once_per_round_remaining_hands"
+    "consumableActivation": "once_per_round_remaining_hands",
+    "expansion8Items": true
   },
   "ranking": {
     "sortOrder": [

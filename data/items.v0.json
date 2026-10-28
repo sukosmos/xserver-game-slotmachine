@@ -1,5 +1,5 @@
 {
-  "version": "v0.14",
+  "version": "v0.15",
   "chanceUnits": "basis_points: 10000 = 100%",
   "items": [
     {
@@ -217,7 +217,7 @@
       "id": "scammers_card",
       "nameKo": "사기꾼의 카드",
       "rarity": "rare",
-      "price": 5,
+      "price": 4,
       "category": "score",
       "slot": "charged",
       "maxStacks": 1,
@@ -639,6 +639,188 @@
           "den": 2
         }
       }
+    },
+    {
+      "id": "survival_bag",
+      "nameKo": "생존 가방",
+      "rarity": "rare",
+      "price": 5,
+      "maxStacks": 1,
+      "effect": {
+        "kind": "expand_inventory_capacity",
+        "permanentSlotsAdded": 2,
+        "limitedSlotsAdded": 1,
+        "applyAt": "purchase_commit",
+        "discardable": false,
+        "occupiesSlots": 0
+      },
+      "category": "capacity",
+      "slot": "none",
+      "minShopRound": 1,
+      "uniquePerRun": true
+    },
+    {
+      "id": "rock_bottom",
+      "nameKo": "록 바텀",
+      "rarity": "epic",
+      "price": 8,
+      "maxStacks": 1,
+      "effect": {
+        "kind": "bonus_per_physical_symbol_base_value",
+        "symbol": "diamond",
+        "baseValueSource": "symbol_catalog_raw_base_score",
+        "rawBaseScore": 5,
+        "bonusMultiplier": 100,
+        "board": "finalPhysicalBoard",
+        "scoreBucket": "specialFlatBonus",
+        "affectedByLineOnlyMultipliers": false,
+        "affectedByGlobalScoreMultipliers": true
+      },
+      "category": "score",
+      "slot": "permanent",
+      "minShopRound": 3,
+      "uniquePerRun": true
+    },
+    {
+      "id": "emils_shop",
+      "nameKo": "에밀의 상점",
+      "rarity": "legendary",
+      "price": 10,
+      "maxStacks": 1,
+      "effect": {
+        "kind": "choose_one_remaining_destiny_card",
+        "trigger": "shop_purchase_selection_commit",
+        "selectionSource": "eligible_unclaimed_destiny_cards",
+        "selectionScope": "all_eligible",
+        "selectionRequired": true,
+        "grantPrice": 0,
+        "ownershipPolicy": "existing_destiny_card_rules",
+        "occupiesSlots": 0,
+        "hideOfferWhenChoicesEmpty": true
+      },
+      "category": "destiny",
+      "slot": "none",
+      "minShopRound": 5,
+      "uniquePerRun": true
+    },
+    {
+      "id": "help_hand",
+      "nameKo": "도움의 손길",
+      "rarity": "epic",
+      "price": 7,
+      "maxStacks": 1,
+      "effect": {
+        "kind": "complete_one_random_two_match_line",
+        "durationRounds": 1,
+        "startsAt": "next_round_after_purchase",
+        "maxPhysicalEditsPerHand": 1,
+        "procChanceBasisPoints": 10000,
+        "priority": "before_existing_physical_edits",
+        "candidateDefinition": "exactly_two_equal_one_different_physical_symbols",
+        "candidateWeight": "uniform_by_line_tuple",
+        "canTriggerOnMultipleHandsInRound": true,
+        "roundEndExpiration": "always",
+        "consumesPhysicalEditSlot": true
+      },
+      "category": "board",
+      "slot": "round",
+      "minShopRound": 1,
+      "uniquePerRun": false
+    },
+    {
+      "id": "kaijis_dice",
+      "nameKo": "카이지의 주사위",
+      "rarity": "epic",
+      "price": 7,
+      "maxStacks": 1,
+      "effect": {
+        "kind": "modify_item_proc_chances",
+        "relativeIncreaseNumerator": 1,
+        "relativeIncreaseDenominator": 2,
+        "appliesTo": "probabilistic_item_effect_checks",
+        "excludes": [
+          "shop_offer_weights",
+          "shop_rarity",
+          "symbol_draw_weights",
+          "guaranteed_effects",
+          "non_item_rng"
+        ],
+        "stackWithModulator": "additive_on_base_probability",
+        "rounding": "floor_basis_points",
+        "maxChanceBasisPoints": 10000
+      },
+      "category": "proc",
+      "slot": "permanent",
+      "minShopRound": 1,
+      "uniquePerRun": true
+    },
+    {
+      "id": "midas_hand",
+      "nameKo": "미다스의 손",
+      "rarity": "legendary",
+      "price": 9,
+      "maxStacks": 1,
+      "effect": {
+        "kind": "coin_on_round_clear_per_physical_symbol_count",
+        "symbol": "diamond",
+        "board": "finalPhysicalBoard",
+        "diamondsPerCoin": 2,
+        "maxCoinsPerRound": 3,
+        "carryBetweenRounds": false,
+        "payoutOnlyOnRoundClear": true,
+        "countWhenActive": "hands_from_first_active_round",
+        "rounding": "floor"
+      },
+      "category": "economy",
+      "slot": "permanent",
+      "minShopRound": 1,
+      "uniquePerRun": true
+    },
+    {
+      "id": "doubles",
+      "nameKo": "묻고 더블로 가",
+      "rarity": "epic",
+      "price": 7,
+      "maxStacks": 1,
+      "effect": {
+        "kind": "double_next_actual_hand_after_no_line",
+        "lineCountSource": "actualWinningLines",
+        "scoreMultiplierNumerator": 2,
+        "scoreMultiplierDenominator": 1,
+        "multiplierScope": "entire_final_spin_score",
+        "oneSpinOnly": true,
+        "doesNotCompoundAcrossConsecutiveMisses": true,
+        "persistsAcrossRoundBoundaries": true,
+        "ignorePreviousHandsBeforeItemActivation": true
+      },
+      "category": "score",
+      "slot": "permanent",
+      "minShopRound": 1,
+      "uniquePerRun": true
+    },
+    {
+      "id": "hootie_fruitie",
+      "nameKo": "후티 프루티",
+      "rarity": "epic",
+      "price": 7,
+      "maxStacks": 1,
+      "effect": {
+        "kind": "multiply_symbol_base_and_line_score",
+        "symbols": [
+          "cherry",
+          "lemon"
+        ],
+        "baseScoreMultiplier": 3,
+        "linePayoutMultiplier": 3,
+        "multiplyProcRates": false,
+        "stackWithSameSymbolItems": "multiplicative_distinct_family",
+        "baseScoreUsesPhysicalSymbols": true,
+        "lineScoreUsesResolvedWinningSymbol": true
+      },
+      "category": "score",
+      "slot": "permanent",
+      "minShopRound": 1,
+      "uniquePerRun": true
     }
   ]
 }

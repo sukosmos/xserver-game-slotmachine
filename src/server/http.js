@@ -6,14 +6,14 @@ import { serveStatic } from './static.js';
 const base = '/api/game/v1';
 const routes = new Map([
   ['endless/start', 'START_ENDLESS'],
-  ['cards/choice', 'CHOOSE_CARD'],
+  ['cards/choice', 'CHOOSE_CARD'], ['shop/destiny', 'BUY_DESTINY'],
   ['spins', 'SPIN'], ['claim', 'CLAIM'], ['shop/purchases', 'BUY'],
   ['shop/rerolls', 'REROLL'], ['shop/discards', 'DISCARD'], ['shop/continue', 'CONTINUE'],
 ]);
 const badRequest = new Set(['INVALID_JSON', 'INVALID_COMMAND', 'INVALID_LIMIT', 'INVALID_QUERY', 'INVALID_CONTENT_TYPE']);
 const conflicts = new Set(['STALE_REVISION', 'IDEMPOTENCY_CONFLICT', 'INVALID_RUN_PHASE', 'NO_HANDS_LEFT', 'TARGET_NOT_MET',
   'INSUFFICIENT_COINS', 'ITEM_CAP_REACHED', 'INVENTORY_FULL', 'SOLD_OUT', 'EMPTY_SHOP_SLOT', 'UNKNOWN_SHOP_SLOT', 'UNKNOWN_ITEM_INSTANCE',
-  'COIN_OVERFLOW', 'SHOP_COUNTER_EXHAUSTED', 'ITEM_ORDER_EXHAUSTED', 'REVISION_EXHAUSTED', 'UNKNOWN_CARD_SLOT']);
+  'COIN_OVERFLOW', 'SHOP_COUNTER_EXHAUSTED', 'ITEM_ORDER_EXHAUSTED', 'REVISION_EXHAUSTED', 'UNKNOWN_CARD_SLOT', 'ITEM_ALREADY_PURCHASED', 'ITEM_NOT_AVAILABLE', 'NO_DESTINY_CHOICES', 'DESTINY_SELECTION_REQUIRED', 'INVALID_DESTINY_CARD', 'ITEM_NOT_DISCARDABLE']);
 
 function readBody(req, maximum = 4096) {
   requireCondition(/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(req.headers['content-type'] ?? ''), 'INVALID_CONTENT_TYPE');
@@ -141,7 +141,7 @@ export function createGameServer({ store, authenticate = (token) => store.authen
       requireCondition(req.method === 'POST' && routes.has(suffix), 'NOT_FOUND');
       const body = await readBody(req);
       const type = routes.get(suffix);
-      const allowed = ['expectedRevision', ...(['BUY', 'CHOOSE_CARD'].includes(type) ? ['slotId'] : type === 'DISCARD' ? ['instanceId'] : [])];
+      const allowed = ['expectedRevision', ...(['BUY', 'CHOOSE_CARD', 'BUY_DESTINY'].includes(type) ? ['slotId', ...(type === 'BUY_DESTINY' ? ['selectedDestinyCardId'] : [])] : type === 'DISCARD' ? ['instanceId'] : [])];
       requireCondition(Object.keys(body).length === allowed.length && allowed.every((field) => Object.hasOwn(body, field)), 'INVALID_COMMAND');
       send(200, store.execute(userId, runId, { ...body, type, idempotencyKey: req.headers['idempotency-key'] }));
     } catch (error) {

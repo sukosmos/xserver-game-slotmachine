@@ -16,4 +16,90 @@
   <symbol id="receipt" viewBox="0 0 100 100"><path d="M23 12h54v76l-9-7-9 7-9-7-9 7-9-7-9 7Z M34 30h32M34 45h32M34 60h20" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/></symbol>
   <symbol id="edit" viewBox="0 0 100 100"><path d="m24 68-5 17 17-5 46-46-12-12Zm35-35 12 12M46 83h36" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/></symbol>
   <use href="#seven"/>
+  <symbol id="survival_bag" viewBox="0 0 100 100">
+
+<g stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+  <path d="M36 25v-8c0-7 5-11 14-11s14 4 14 11v8"/>
+  <rect x="22" y="23" width="56" height="66" rx="12"/>
+  <path d="M22 39C12 39 10 46 10 56v20M78 39c10 0 12 7 12 17v20"/>
+  <path d="M37 25v24m26-24v24"/>
+  <rect x="34" y="58" width="32" height="22" rx="4"/>
+  <path d="M50 63v12m-6-6h12" stroke-width="4.5"/>
+</g>
+  </symbol>
+  <symbol id="rock_bottom" viewBox="0 0 100 100">
+
+<g stroke="currentColor" stroke-linejoin="round" stroke-linecap="round" fill="none">
+  <path stroke-width="5.5" d="M14 35 32 15h36l18 20-36 41Z"/>
+  <path stroke-width="4.5" d="M14 35h72M32 15l10 20 8 41 9-41 9-20"/>
+  <path stroke-width="5.5" d="M11 86h78"/>
+  <path stroke-width="4" d="M19 78h10M73 78h11"/>
+</g>
+  </symbol>
+  <symbol id="emils_shop" viewBox="0 0 100 100">
+
+<g stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="50" cy="50" r="39" stroke-width="5.5"/>
+  <ellipse cx="30" cy="40" rx="11" ry="14" stroke-width="5"/>
+  <ellipse cx="70" cy="40" rx="11" ry="14" stroke-width="5"/>
+  <path d="M45 58h.3m9.7 0h.3" stroke-width="5.5"/>
+  <path d="M17 62Q50 79 83 62Q79 85 50 88Q21 85 17 62Z" stroke-width="4.5"/>
+  <path d="M27 68v13m11-10v13m12-11v13m12-15v13m11-16v13" stroke-width="3"/>
+</g>
+  </symbol>
+  <symbol id="help_hand" viewBox="0 0 100 100">
+
+<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <g transform="translate(-7 17) scale(.79)">
+    <path d="M28 52V28a6 6 0 0 1 12 0v20-30a6 6 0 0 1 12 0v30-25a6 6 0 0 1 12 0v28-15a6 6 0 0 1 12 0v28c0 16-10 25-25 25-10 0-16-5-22-13L17 61c-6-8 3-15 9-8l8 9" stroke-width="6.5"/>
+  </g>
+  <path d="M76 17v27m-13-13h26" stroke-width="6"/>
+</g>
+  </symbol>
+  <symbol id="kaijis_dice" viewBox="0 0 100 100">
+
+<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="15" y="30" width="62" height="59" rx="10" stroke-width="5.5"/>
+  <g fill="currentColor" stroke="none">
+    <circle cx="31" cy="46" r="4.2"/><circle cx="61" cy="46" r="4.2"/>
+    <circle cx="46" cy="60" r="4.2"/><circle cx="31" cy="74" r="4.2"/><circle cx="61" cy="74" r="4.2"/>
+  </g>
+  <path d="M82 37V12m-10 10 10-10 10 10" stroke-width="5.5"/>
+</g>
+  </symbol>
+  <symbol id="midas_hand" viewBox="0 0 100 100">
+
+<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <g transform="translate(-10 17) scale(.8)">
+    <path d="M28 52V28a6 6 0 0 1 12 0v20-30a6 6 0 0 1 12 0v30-25a6 6 0 0 1 12 0v28-15a6 6 0 0 1 12 0v28c0 16-10 25-25 25-10 0-16-5-22-13L17 61c-6-8 3-15 9-8l8 9" stroke-width="6.5"/>
+  </g>
+  <circle cx="80" cy="24" r="12" stroke-width="5.5"/>
+  <path d="M75 21h10m-10 6h10" stroke-width="3.5"/>
+</g>
+  </symbol>
+  <symbol id="doubles" viewBox="0 0 100 100">
+
+<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="14" y="25" width="52" height="61" rx="5" stroke-width="5.5"/>
+  <rect x="29" y="13" width="55" height="64" rx="5" stroke-width="5.5"/>
+  <path d="M40 37l11 12m0-12L40 49" stroke-width="5"/>
+  <path d="M60 38c0-7 13-9 15-2 2 6-2 9-14 23h15" stroke-width="5"/>
+</g>
+  </symbol>
+  <symbol id="hootie_fruitie" viewBox="0 0 100 100">
+
+<g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none">
+  <!-- Original cherry contour/stems reduced and moved left. -->
+  <g transform="translate(2 16) scale(.56)" stroke-width="9">
+    <path d="M35 59C35 35 58 37 58 16M64 63C69 39 58 34 58 16"/>
+    <path d="M58 18C71 6 84 18 82 23C68 30 61 24 58 18Z"/>
+    <circle cx="31" cy="65" r="21"/><circle cx="66" cy="70" r="20"/>
+  </g>
+  <!-- Original lemon contour/leaf reduced and moved right. -->
+  <g transform="translate(44 14) scale(.55)" stroke-width="9">
+    <path d="M17 66C7 42 33 15 57 18L71 14L76 27C97 49 77 78 51 83L39 87L32 78Z"/>
+    <path d="M72 17C72 5 89 4 91 10C87 22 80 23 72 17Z"/>
+  </g>
+</g>
+  </symbol>
 </svg>

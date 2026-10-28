@@ -1,0 +1,205 @@
+{
+  "version": "v0.7-proposed8",
+  "baseRulesVersion": "v0.6-selected8",
+  "mergePolicy": "append_by_id_no_overwrite",
+  "status": "proposed_codex_contract",
+  "chanceUnits": "basis_points (10000 = 100%)",
+  "notes": [
+    "Midas Hand effect is a proposal; original request leaves it unspecified.",
+    "Destiny card registry is not in the supplied baseline; Emil offer must be gated behind a real registry.",
+    "Kaiji applies to item effect procs, not item shop appearance chances."
+  ],
+  "items": [
+    {
+      "id": "survival_bag",
+      "nameKo": "생존 가방",
+      "nameEn": "Survival Bag",
+      "price": 5,
+      "rarity": "rare",
+      "lifecycle": "permanent",
+      "slot": "none",
+      "maxStacks": 1,
+      "availableFromUpcomingRound": 1,
+      "uniquePerRun": true,
+      "effect": {
+        "kind": "expand_inventory_capacity",
+        "permanentSlotsAdded": 2,
+        "limitedSlotsAdded": 1,
+        "applyAt": "purchase_commit",
+        "discardable": false,
+        "occupiesSlots": 0
+      }
+    },
+    {
+      "id": "rock_bottom",
+      "nameKo": "록 바텀",
+      "nameEn": "Rock Bottom",
+      "price": 8,
+      "rarity": "epic",
+      "lifecycle": "permanent",
+      "slot": "permanent",
+      "maxStacks": 1,
+      "availableFromUpcomingRound": 4,
+      "uniquePerRun": true,
+      "effect": {
+        "kind": "bonus_per_physical_symbol_base_value",
+        "symbol": "diamond",
+        "baseValueSource": "symbol_catalog_raw_base_score",
+        "rawBaseScore": 5,
+        "bonusMultiplier": 100,
+        "board": "finalPhysicalBoard",
+        "scoreBucket": "specialFlatBonus",
+        "affectedByLineOnlyMultipliers": false,
+        "affectedByGlobalScoreMultipliers": true
+      }
+    },
+    {
+      "id": "emils_shop",
+      "nameKo": "에밀의 상점",
+      "nameEn": "Emil's Shop",
+      "price": 10,
+      "rarity": "legendary",
+      "lifecycle": "once_immediate",
+      "slot": "none",
+      "maxStacks": 1,
+      "availableFromUpcomingRound": 6,
+      "uniquePerRun": true,
+      "requiresFeature": "destiny_cards",
+      "effect": {
+        "kind": "choose_one_remaining_destiny_card",
+        "trigger": "shop_purchase_selection_commit",
+        "selectionSource": "eligible_unclaimed_destiny_cards",
+        "selectionScope": "all_eligible",
+        "selectionRequired": true,
+        "grantPrice": 0,
+        "ownershipPolicy": "existing_destiny_card_rules",
+        "occupiesSlots": 0,
+        "hideOfferWhenChoicesEmpty": true
+      }
+    },
+    {
+      "id": "help_hand",
+      "nameKo": "도움의 손길",
+      "nameEn": "Help Hand",
+      "price": 7,
+      "rarity": "epic",
+      "lifecycle": "round_limited",
+      "slot": "limited",
+      "maxStacks": 1,
+      "availableFromUpcomingRound": 1,
+      "uniquePerRun": false,
+      "effect": {
+        "kind": "complete_one_random_two_match_line",
+        "durationRounds": 1,
+        "startsAt": "next_round_after_purchase",
+        "maxPhysicalEditsPerHand": 1,
+        "procChanceBasisPoints": 10000,
+        "priority": "before_existing_physical_edits",
+        "candidateDefinition": "exactly_two_equal_one_different_physical_symbols",
+        "candidateWeight": "uniform_by_line_tuple",
+        "canTriggerOnMultipleHandsInRound": true,
+        "roundEndExpiration": "always",
+        "consumesPhysicalEditSlot": true
+      }
+    },
+    {
+      "id": "kaijis_dice",
+      "nameKo": "카이지의 주사위",
+      "nameEn": "Kaiji's Dice",
+      "price": 7,
+      "rarity": "epic",
+      "lifecycle": "permanent",
+      "slot": "permanent",
+      "maxStacks": 1,
+      "availableFromUpcomingRound": 1,
+      "uniquePerRun": true,
+      "effect": {
+        "kind": "modify_item_proc_chances",
+        "relativeIncreaseNumerator": 1,
+        "relativeIncreaseDenominator": 2,
+        "appliesTo": "probabilistic_item_effect_checks",
+        "excludes": [
+          "shop_offer_weights",
+          "shop_rarity",
+          "symbol_draw_weights",
+          "guaranteed_effects",
+          "non_item_rng"
+        ],
+        "stackWithModulator": "additive_on_base_probability",
+        "rounding": "floor_basis_points",
+        "maxChanceBasisPoints": 10000
+      }
+    },
+    {
+      "id": "midas_hand",
+      "nameKo": "미다스의 손",
+      "nameEn": "Midas' Hand",
+      "price": 9,
+      "rarity": "legendary",
+      "lifecycle": "permanent",
+      "slot": "permanent",
+      "maxStacks": 1,
+      "availableFromUpcomingRound": 1,
+      "uniquePerRun": true,
+      "effect": {
+        "kind": "coin_on_round_clear_per_physical_symbol_count",
+        "symbol": "diamond",
+        "board": "finalPhysicalBoard",
+        "diamondsPerCoin": 2,
+        "maxCoinsPerRound": 3,
+        "carryBetweenRounds": false,
+        "payoutOnlyOnRoundClear": true,
+        "countWhenActive": "hands_from_first_active_round",
+        "rounding": "floor"
+      }
+    },
+    {
+      "id": "doubles",
+      "nameKo": "묻고 더블로 가",
+      "nameEn": "Doubles",
+      "price": 7,
+      "rarity": "epic",
+      "lifecycle": "permanent",
+      "slot": "permanent",
+      "maxStacks": 1,
+      "availableFromUpcomingRound": 1,
+      "uniquePerRun": true,
+      "effect": {
+        "kind": "double_next_actual_hand_after_no_line",
+        "lineCountSource": "actualWinningLines",
+        "scoreMultiplierNumerator": 2,
+        "scoreMultiplierDenominator": 1,
+        "multiplierScope": "entire_final_spin_score",
+        "oneSpinOnly": true,
+        "doesNotCompoundAcrossConsecutiveMisses": true,
+        "persistsAcrossRoundBoundaries": true,
+        "ignorePreviousHandsBeforeItemActivation": true
+      }
+    },
+    {
+      "id": "hootie_fruitie",
+      "nameKo": "후티 프루티",
+      "nameEn": "Hootie Fruitie",
+      "price": 7,
+      "rarity": "epic",
+      "lifecycle": "permanent",
+      "slot": "permanent",
+      "maxStacks": 1,
+      "availableFromUpcomingRound": 1,
+      "uniquePerRun": true,
+      "effect": {
+        "kind": "multiply_symbol_base_and_line_score",
+        "symbols": [
+          "cherry",
+          "lemon"
+        ],
+        "baseScoreMultiplier": 3,
+        "linePayoutMultiplier": 3,
+        "multiplyProcRates": false,
+        "stackWithSameSymbolItems": "multiplicative_distinct_family",
+        "baseScoreUsesPhysicalSymbols": true,
+        "lineScoreUsesResolvedWinningSymbol": true
+      }
+    }
+  ]
+}

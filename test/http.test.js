@@ -384,3 +384,32 @@ test('rank details are public to authenticated players while private runs and un
   assert.equal((await call(`/leaderboard/${created.runId}`,{body:{snapshot:{score:'999'}},key:'inject'})).status,404);
   assert.doesNotMatch(JSON.stringify(other.data),/alice|initialSeed|rngBefore|randomTrace|owner_id|idempotencyKey/);
 });
+
+test('expansion Emil selection HTTP validates cards, owner and price, commits once and preserves both rewards', async t=>{
+ const {call,otherToken}=await setup(t,{},raw=>{
+   Object.assign(raw,currentRawRules());raw.balance.economy.startingCoins=100;
+   raw.balance.round.roundTargets.forEach(r=>r.targetScore='1');
+   const keep=new Set([...raw.balance.shop.upgradeItemIds,'emils_shop']);
+   raw.catalog.items=raw.catalog.items.filter(i=>keep.has(i.id));
+ });
+ let result=await call('/runs',{body:{},key:'create'});let state=result.data.state;const id=state.runId;
+ const act=async(path,extra={})=>{const r=await call(`/runs/${id}/${path}`,{body:{expectedRevision:state.revision,...extra},key:`step-${state.revision}`});assert.equal(r.status,200,JSON.stringify(r.data));state=r.data.state;return r;};
+ for(let round=1;round<=5;round++){
+   await act('spins');
+   if(state.phase==='CARD_CHOICE')await act('cards/choice',{slotId:state.cardChoice.slots[0].slotId});
+   if(round<5){assert.ok(state.shop.slots.every(o=>o.itemId!=='emils_shop'));await act('shop/continue');}
+ }
+ const offer=state.shop.slots.find(o=>o.itemId==='emils_shop');assert.equal(offer.destinyChoices.length,3);
+ const before=structuredClone(state), path=`/runs/${id}/shop/destiny`;
+ const body={expectedRevision:state.revision,slotId:offer.slotId,selectedDestinyCardId:offer.destinyChoices[0].cardId};
+ assert.equal((await call(path,{body,key:'wrong-owner',auth:otherToken})).status,404);
+ assert.equal((await call(path,{body:{...body,coins:0},key:'forged'})).status,400);
+ assert.equal((await call(path,{body:{...body,selectedDestinyCardId:state.milestoneReward.cardId},key:'owned'})).status,409);
+ assert.equal((await call(`/runs/${id}/shop/purchases`,{body:{expectedRevision:state.revision,slotId:offer.slotId},key:'no-selection'})).status,409);
+ assert.deepEqual((await call(`/runs/${id}`)).data.state,before);
+ const bought=await call(path,{body,key:'buy-destiny'});assert.equal(bought.status,200);
+ assert.equal(bought.data.state.milestoneRewards.length,2);assert.ok(bought.data.state.items.every(i=>i.itemId!=='emils_shop'));
+ assert.deepEqual((await call(path,{body,key:'buy-destiny'})).data,bought.data);
+ assert.equal((await call(path,{body,key:'stale'})).status,409);
+ assert.deepEqual((await call(`/runs/${id}`)).data.state,bought.data.state);
+});

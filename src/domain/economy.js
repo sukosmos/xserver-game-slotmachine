@@ -1,3 +1,4 @@
+import { hasExpansion, procDetails } from './expansion8.js';
 import { requireCondition } from './errors.js';
 import { activeItems } from './inventory.js';
 import { getItem } from './rules.js';
@@ -29,11 +30,22 @@ export function calculateClearReward(state, rules, rng) {
   let bonusCoins = 0n;
   const triggeredItems = [];
   const randomTrace = [];
+  let midasCoins = 0;
+  for (const instance of active) {
+    const effect = getItem(rules,instance.itemId).effect;
+    if (effect.kind === 'coin_on_round_clear_per_physical_symbol_count') {
+      midasCoins = Math.min(effect.maxCoinsPerRound, Math.floor((state.midasDiamondCountThisRound ?? 0) / effect.diamondsPerCoin));
+      bonusCoins += BigInt(midasCoins);
+      if (midasCoins) triggeredItems.push({instanceId:instance.instanceId,itemId:instance.itemId,coins:midasCoins});
+    }
+  }
   for (const instance of active) {
     const effect = getItem(rules, instance.itemId).effect;
     if (effect.kind !== 'chance_coins_on_clear') continue;
     const roll = drawInt(rng, 10000, randomTrace, { purpose: 'clear_bonus', instanceId: instance.instanceId });
-    if (roll < effect.triggerChanceBasisPoints) {
+    const info = procDetails(effect.triggerChanceBasisPoints,active,rules);
+    if (info.sources.length) Object.assign(randomTrace.at(-1),info,{roll});
+    if (roll < info.effectiveBp) {
       bonusCoins += BigInt(effect.coins);
       triggeredItems.push({ instanceId: instance.instanceId, itemId: instance.itemId, coins: effect.coins });
     }
@@ -41,6 +53,7 @@ export function calculateClearReward(state, rules, rng) {
   const reward = baseReward + itemBaseBonus + handBonus + interest + bonusCoins;
   return {
     settlement: {
+      ...(hasExpansion(rules) ? { midasCoins } : {}),
       coinsBefore, baseReward: safeAmount(baseReward), itemBaseBonus: safeAmount(itemBaseBonus), handBonus: safeAmount(handBonus),
       interest: safeAmount(interest), interestCap: safeAmount(cap), bonusCoins: safeAmount(bonusCoins),
       reward: safeAmount(reward), coinsAfterReward: safeAmount(BigInt(coinsBefore) + reward), triggeredItems,

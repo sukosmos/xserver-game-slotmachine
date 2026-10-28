@@ -2,7 +2,7 @@
 
 - `balance.v0.json`: 심벌 확률/점수, Hand, 라운드 목표, 경제와 상점.
 - `lines.v0.json`: 8개 페이라인 정의(인덱스 0~8).
-- `items.v0.json`: **37종** 아이템의 효과·등급·가격·수명·중첩 정의.
+- `items.v0.json`: **45종** 아이템의 효과·등급·가격·수명·중첩 정의.
 
 `items[].effect.kind`는 선언적 사양이다. `src/domain/rules.js`는 전체 카탈로그의 필수 필드, 심벌 참조, 효과 종류/인수, 가격·수명·배율을 검증하고 **알 수 없는 kind/필드는 오류**를 반환한다. 전투/점수 29종은 `items.js`·`item-scoring.js`·`selected8.js`, Hand 2종은 `hands.js`·`selected8.js`, 경제 6종은 `economy.js`·`shop.js`에서 실행한다. 구매 명령은 서버가 제시한 slotId만 받으며 아이템 ID·가격·수량을 클라이언트가 지정하지 않는다.
 
@@ -28,3 +28,5 @@ v0.12: `consumableActivation`과 소모 효과의 `triggerPolicy`로 라운드�
 
 ## v0.14
 `shop.upgradeItemIds`의 기본 강화10종은 영구/제한칸을 사용하지 않는다. 영구4/제한2/강화 무제한. `shop.offerGroups`는 강화2/일반3칸을 지정한다. 아이템 효과·가격·중첩 한도와 목표/보상은 직전 JSON과 동일하다.
+
+신규8종과 기존37종의 통합 규칙: [v0.15](../docs/20-EXPANSION8.md).

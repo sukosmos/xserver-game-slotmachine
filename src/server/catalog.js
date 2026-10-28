@@ -10,6 +10,15 @@ function describeEffect(item) {
   const e = item.effect;
   const chance = e.triggerPolicy ? '남은 Hand 수의 역수' : `${e.triggerChanceBasisPoints / 100}%`;
   switch (e.kind) {
+    case 'expand_inventory_capacity': return `영구 +${e.permanentSlotsAdded} / 제한 +${e.limitedSlotsAdded}칸 · 즉시 적용 · 장착칸 0 · 폐기 불가`;
+    case 'bonus_per_physical_symbol_base_value': return `실제 다이아 기본점수 ×${e.bonusMultiplier} 추가 (기본 다이아 1개당 +${e.rawBaseScore * e.bonusMultiplier}점) · 전체 배수 적용`;
+    case 'choose_one_remaining_destiny_card': return '미획득 운명 카드 1장 선택 · 확정 시 즉시 지급 · 장착칸 0';
+    case 'complete_one_random_two_match_line': return '다음 한 라운드 · 매 Hand 두 개 일치 라인 하나를 균등 선택해 완성 · 물리 조작 최우선';
+    case 'modify_item_proc_chances': return '모든 아이템 발동 확률 상대 +50% (최대 100%) · 심벌·상점 확률 제외';
+    case 'coin_on_round_clear_per_physical_symbol_count': return `라운드 실제 다이아 ${e.diamondsPerCoin}개당 클리어 +1코인 · 최대 ${e.maxCoinsPerRound} · 실패 보상 0`;
+    case 'double_next_actual_hand_after_no_line': return '실제 당첨 0라인이면 다음 스핀 전체 ×2 · 연속 무당첨에도 ×2 · 라운드 이월';
+    case 'multiply_symbol_base_and_line_score': return `체리·레몬 1칸 점수 ×${e.baseScoreMultiplier}, 실제 라인 배당 ×${e.linePayoutMultiplier} · 강화 후 곱 적용`;
+
     case 'weight_add': return `${names[e.symbol]} 등장 가중치 +${e.amount}${e.basePointAdd ? `, 1칸 점수 +${e.basePointAdd}` : ''}. 중첩은 합산됩니다.`;
     case 'symbol_line_add_factor': return `${names[e.symbol]} 라인 배당에 기본 배당의 ${ratio(e.extraFactor)} 추가${e.basePointAdd ? `, 1칸 점수 +${e.basePointAdd}` : ''}. 중첩은 합산됩니다.`;
     case 'random_candidate_edit': return `${chance} 확률로 완성 가능한 라인 하나를 균등 선택해 1칸을 바꿉니다.${e.selectedLineMultiplier ? ` 선택한 라인 배당 ${ratio(e.selectedLineMultiplier)}.` : ''}`;
@@ -63,6 +72,15 @@ export function summarizeItem(item) {
   const e = item.effect, chance = e.triggerPolicy ? '라운드당 최대 1회' : `${e.triggerChanceBasisPoints / 100}%`;
   const factor = percent;
   switch (e.kind) {
+    case 'expand_inventory_capacity': return `영구 +${e.permanentSlotsAdded} / 제한 +${e.limitedSlotsAdded}칸 · 즉시 적용 · 장착칸 0 · 폐기 불가`;
+    case 'bonus_per_physical_symbol_base_value': return `실제 다이아 기본점수 ×${e.bonusMultiplier} 추가 (기본 다이아 1개당 +${e.rawBaseScore * e.bonusMultiplier}점) · 전체 배수 적용`;
+    case 'choose_one_remaining_destiny_card': return '미획득 운명 카드 1장 선택 · 확정 시 즉시 지급 · 장착칸 0';
+    case 'complete_one_random_two_match_line': return '다음 한 라운드 · 매 Hand 두 개 일치 라인 하나를 균등 선택해 완성 · 물리 조작 최우선';
+    case 'modify_item_proc_chances': return '모든 아이템 발동 확률 상대 +50% (최대 100%) · 심벌·상점 확률 제외';
+    case 'coin_on_round_clear_per_physical_symbol_count': return `라운드 실제 다이아 ${e.diamondsPerCoin}개당 클리어 +1코인 · 최대 ${e.maxCoinsPerRound} · 실패 보상 0`;
+    case 'double_next_actual_hand_after_no_line': return '실제 당첨 0라인이면 다음 스핀 전체 ×2 · 연속 무당첨에도 ×2 · 라운드 이월';
+    case 'multiply_symbol_base_and_line_score': return `체리·레몬 1칸 점수 ×${e.baseScoreMultiplier}, 실제 라인 배당 ×${e.linePayoutMultiplier} · 강화 후 곱 적용`;
+
     case 'weight_add': return `${names[e.symbol]} 가중치 +${e.amount}${e.basePointAdd ? ` · 1칸 +${e.basePointAdd}점` : ''}`;
     case 'symbol_line_add_factor': return `${names[e.symbol]} 배당 +${percent(e.extraFactor)}${e.basePointAdd ? ` · 1칸 +${e.basePointAdd}점` : ''}`;
     case 'random_candidate_edit': return `${chance} · 라인 1칸 완성${e.selectedLineMultiplier ? ` · 해당 배당 ${factor(e.selectedLineMultiplier)}` : ''}`;

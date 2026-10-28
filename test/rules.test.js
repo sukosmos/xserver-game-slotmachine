@@ -5,7 +5,7 @@ import { loadRules } from '../src/server/load-rules.js';
 import { rules, rawRules } from './helpers.js';
 
 test('load and freeze all three catalogs; compile scores to BigInt', () => {
-  assert.equal(rules.catalog.items.length, 37);
+  assert.equal(rules.catalog.items.length, 45);
   assert.equal(rules.lines.length, 8);
   assert.equal(rules.symbolsById.seven.linePayout, 1500n);
   assert.equal(getItem(rules, 'miracle_hand').effect.triggerChanceBasisPoints, 2000);

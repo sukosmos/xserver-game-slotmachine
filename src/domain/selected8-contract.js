@@ -1,3 +1,5 @@
+import { isExpansion, hasExpansion } from './expansion-contract.js';
+
 // Supported policies for the eight selected effects; tunable numbers remain in data/*.json.
 export const selected8Contracts = {
   "clear_round_before_run_failed": {
@@ -204,4 +206,4 @@ export const selected8Contracts = {
 };
 
 export const isSelected8 = (item) => Object.hasOwn(selected8Contracts, item.effect.kind);
-export const isItemEnabled = (item, rules) => !isSelected8(item) || rules.balance.itemRules.selected8Items === true;
+export const isItemEnabled = (item, rules) => (!isSelected8(item) || rules.balance.itemRules.selected8Items === true) && (!isExpansion(item) || hasExpansion(rules));

@@ -6,6 +6,8 @@ npm run play           # http://127.0.0.1:3000 로컬 게임 화면
 npm run play:shared    # NINE_SHARE_ORIGIN 지정 시 별도 저장소의 임시 게스트 공유 서버
 ```
 
+v0.15: 신규 아이템8종과 전용 아이콘을 추가했습니다(총45종). 에밀의 카드 선택, 슬롯 확장, 라운드 한정 효과를 지원하며 기존 저장은 시작 당시 규칙을 유지합니다. 자세한 내용은 [신규8종](docs/20-EXPANSION8.md)을 참고하세요.
+
 # To. Claude
 
 who's gonna install this repository to your server, please consider below.

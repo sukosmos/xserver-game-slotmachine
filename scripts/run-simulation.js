@@ -31,7 +31,9 @@ export function simulateRuns(rules, { trials = 10000, seed = 'nine-phase5-v1', s
           const x = definitions.get(a.itemId), y = definitions.get(b.itemId);
           return Number(x.category === 'economy') - Number(y.category === 'economy') || a.price - b.price || a.itemId.localeCompare(b.itemId, 'en');
         });
-        if (shopping && offers.length) action = { type: 'BUY', slotId: offers[0].slotId };
+        if (shopping && offers.length) action = offers[0].destinyChoices
+          ? { type:'BUY_DESTINY', slotId:offers[0].slotId, selectedDestinyCardId:offers[0].destinyChoices[0].cardId }
+          : { type:'BUY', slotId:offers[0].slotId };
         else if (shopping && shop.canReroll && (shop.freeRerollsRemaining > 0 || (shop.paidRerolls === 0 && state.coins >= shop.rerollPrice + Math.min(...rules.catalog.items.map((item) => item.price))))) action = { type: 'REROLL' };
         else action = { type: 'CONTINUE' };
       }
@@ -43,7 +45,7 @@ export function simulateRuns(rules, { trials = 10000, seed = 'nine-phase5-v1', s
         row.clears++; row.rewards += BigInt(result.event.settlement.reward);
         for (const id of active) items[id].clearedActiveRounds++;
       }
-      if (action.type === 'BUY') { row.purchaseSpend += BigInt(result.event.price); items[result.event.itemId].purchases++; }
+      if (['BUY','BUY_DESTINY'].includes(action.type)) { row.purchaseSpend += BigInt(result.event.price); items[result.event.itemId].purchases++; }
       if (action.type === 'REROLL') row.rerollSpend += BigInt(result.event.price);
     }
     if (state.phase === 'RUN_WON') won++;

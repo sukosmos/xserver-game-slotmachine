@@ -24,7 +24,11 @@ function fixture(t,config){const dir=mkdtempSync(join(tmpdir(),'nine-build-'));c
 function driver(store,user='u'){let state=store.createRun(user,'create').state;return {get state(){return state;},act(type,extra={}){const result=store.execute(user,state.runId,{type,expectedRevision:state.revision,idempotencyKey:`act-${state.revision}`,...extra});state=result.state;return result;}};}
 
 test('v0.14 isolates ten upgrades without changing score/economy/item definitions',()=>{
- const old=JSON.parse(readFileSync(new URL('./fixtures/rules-v013-tuned.json',import.meta.url),'utf8')), current=rawRules();
+ const old=JSON.parse(readFileSync(new URL('./fixtures/rules-v013-tuned.json',import.meta.url),'utf8')), current=JSON.parse(readFileSync(new URL('./fixtures/rules-v014.json',import.meta.url),'utf8'));
+ // Explicit baseline balance changes already present before this integration.
+ for(const id of ['sevens_blessing','lucky_crown']) old.catalog.items.find(i=>i.id===id).price=3;
+ Object.assign(old.catalog.items.find(i=>i.id==='scammers_card'),{price:4});
+ old.catalog.items.find(i=>i.id==='scammers_card').effect.fixedPoints=500;
  assert.equal(current.balance.shop.slots,5);assert.equal(current.balance.shop.basePermanentItemSlots,4);assert.equal(upgrades.length,10);
  for(const k of ['upgradeItemIds','offerGroups'])delete current.balance.shop[k];current.balance.shop.slots=4;current.balance.shop.basePermanentItemSlots=8;
  for(const part of Object.keys(current)){delete current[part].version;delete old[part].version;}assert.deepEqual(current,old);

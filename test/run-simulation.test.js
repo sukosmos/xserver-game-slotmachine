@@ -21,3 +21,9 @@ test('full-run sampler reaches all ten rounds and records final rewards', () => 
   assert.equal(report.won, 3); assert.equal(report.spins, 30);
   assert.ok(report.rounds.every((row) => row.clears === 3 && BigInt(row.totalRewards) > 0n && row.totalPurchaseSpend === '0'));
 });
+
+test('full-run sampler purchases Emil through selection and records the purchase exactly once',()=>{
+ const raw=rawRules();raw.balance.economy.startingCoins=1000;raw.balance.round.roundTargets.forEach(t=>t.targetScore='1');
+ const keep=new Set([...raw.balance.shop.upgradeItemIds,'emils_shop']);raw.catalog.items=raw.catalog.items.filter(i=>keep.has(i.id));
+ const report=simulateRuns(parseRules(raw),{trials:2});assert.equal(report.won,2);assert.equal(report.items.emils_shop.purchases,2);
+});

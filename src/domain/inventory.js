@@ -7,6 +7,7 @@ const positiveInteger = (value) => Number.isSafeInteger(value) && value > 0;
 export function createInventory() { return { items: [], nextItemOrder: 1 }; }
 
 export function inventoryGroup(item, rules) {
+  if (item.slot === 'none') return 'slotless';
   return rules.balance.shop.upgradeItemIds?.includes(item.id) ? 'upgrade' : item.slot === 'permanent' ? 'permanent' : 'limited';
 }
 
@@ -17,9 +18,19 @@ export function inventoryUsage(items, rules) {
     const group = inventoryGroup(getItem(rules, instance.itemId), rules);
     if (group === 'upgrade') upgrade.add(instance.itemId);
     else if (group === 'permanent') permanent.add(instance.itemId);
-    else limited += 1;
+    else if (group === 'limited') limited += 1;
   }
   return { permanent: permanent.size, limited, ...(rules.balance.shop.upgradeItemIds ? { upgrade: upgrade.size } : {}) };
+}
+
+export function inventoryLimits(items, rules) {
+  let permanent = rules.balance.shop.basePermanentItemSlots, limited = rules.balance.shop.baseLimitedItemSlots;
+  for (const instance of items) {
+    const e = getItem(rules,instance.itemId).effect;
+    if (e.kind === 'expand_inventory_capacity') { permanent += e.permanentSlotsAdded; limited += e.limitedSlotsAdded; }
+  }
+  requireCondition(Number.isSafeInteger(permanent) && Number.isSafeInteger(limited), 'INVALID_INVENTORY');
+  return { permanent, limited };
 }
 
 export function validateItems(items, rules) {
@@ -48,7 +59,7 @@ export function validateItems(items, rules) {
     copies.set(item.id, count);
   }
   const usage = inventoryUsage(items, rules);
-  requireCondition(usage.permanent <= rules.balance.shop.basePermanentItemSlots && usage.limited <= rules.balance.shop.baseLimitedItemSlots, 'INVENTORY_FULL');
+  requireCondition(usage.permanent <= inventoryLimits(items,rules).permanent && usage.limited <= inventoryLimits(items,rules).limited, 'INVENTORY_FULL');
 }
 
 function validateInventory(inventory, rules) {
@@ -63,6 +74,7 @@ export function acquireItem(inventory, itemId, rules, { activeFromRound } = {}) 
   requireCondition(positiveInteger(activeFromRound), 'INVALID_ACTIVE_ROUND');
   requireCondition(inventory.nextItemOrder < Number.MAX_SAFE_INTEGER, 'ITEM_ORDER_EXHAUSTED');
   const item = getItem(rules, itemId);
+  requireCondition(item.effect.kind !== 'choose_one_remaining_destiny_card', 'DESTINY_SELECTION_REQUIRED');
   const instance = { instanceId: `item-${inventory.nextItemOrder}`, itemId, acquiredOrder: inventory.nextItemOrder, activeFromRound };
   if (item.slot === 'charged') instance.remainingCharges = item.initialCharges;
   if (item.slot === 'timed') instance.remainingSpins = item.durationSpins;
@@ -76,6 +88,7 @@ export function acquireItem(inventory, itemId, rules, { activeFromRound } = {}) 
 export function discardItem(inventory, instanceId, rules) {
   validateInventory(inventory, rules);
   requireCondition(inventory.items.some((item) => item.instanceId === instanceId), 'UNKNOWN_ITEM_INSTANCE');
+  requireCondition(getItem(rules, inventory.items.find(i=>i.instanceId === instanceId).itemId).effect.discardable !== false, 'ITEM_NOT_DISCARDABLE');
   return { items: inventory.items.filter((item) => item.instanceId !== instanceId).map((item) => ({ ...item })), nextItemOrder: inventory.nextItemOrder };
 }
 
@@ -88,7 +101,7 @@ export function acquisitionOrder(a, b) {
 export function activeItems(items, rules, roundIndex) {
   validateItems(items, rules);
   requireCondition(positiveInteger(roundIndex), 'INVALID_ROUND');
-  return items.filter((item) => item.activeFromRound <= roundIndex).sort(acquisitionOrder);
+  return items.filter((item) => item.activeFromRound <= roundIndex && (getItem(rules,item.itemId).slot !== 'round' || item.activeFromRound === roundIndex)).sort(acquisitionOrder);
 }
 
 export function finishItemSpin(items, active, triggeredIds, rules, roundIndex = 1) {

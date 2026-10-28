@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isExpansion } from '../src/domain/expansion-contract.js';
 import { isSelected8 } from '../src/domain/selected8-contract.js';
 
 export const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -80,6 +81,12 @@ export function checkDocumentation(rules, documents) {
       const name = { cherry: '체리', lemon: '레몬', bell: '종', diamond: '다이아', seven: '세븐' }[effect.symbol];
       assert.ok(itemText.includes(`${name} +${effect.basePointAdd}`), `${path}: base point drift`);
     }
+    if (isExpansion(item)) {
+      const row = rows(doc('docs/20-EXPANSION8.md')).find(r=>r[0]===item.id);
+      assert.ok(row, `${path}: missing expansion row`);
+      assert.deepEqual(row.slice(1,6),[item.nameKo,String(item.price),item.rarity,item.slot,String(item.minShopRound)], `${path}: expansion drift`);
+      continue;
+    }
     if (isSelected8(item)) {
       const row = rows(doc('docs/17-SELECTED8.md')).map((r) => r.map(clean)).find((r) => r[0] === item.id);
       assert.ok(row, `${path}: missing selected row`);
@@ -123,7 +130,7 @@ export function checkDocumentation(rules, documents) {
   assert.ok(economyText.includes(`첫 라운드 시작 시 ${economy.startingCoins}코인`), 'starting coins documentation drift');
   if (round.autoClearOnTarget) assert.ok(core.includes('**자동 정산**'), 'automatic settlement documentation drift');
   const economyRows = rows(economyText).map((row) => row.map(clean));
-  for (const item of rules.catalog.items.filter((item) => item.category === 'economy' && !isSelected8(item))) {
+  for (const item of rules.catalog.items.filter((item) => item.category === 'economy' && !isSelected8(item) && !isExpansion(item))) {
     const row = economyRows.find((cells) => cells[0] === `${item.id} ${item.nameKo}`);
     assert.ok(row, `${item.id}: missing economy row`);
     assert.equal(Number(row[2]), item.price, `${item.id}: price drift`);

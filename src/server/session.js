@@ -5,7 +5,9 @@ import { getShopView } from '../domain/shop.js';
 import { stringifyExact } from '../domain/exact.js';
 import { requireCondition } from '../domain/errors.js';
 import { CounterRandom, generateSeed, RNG_VERSION } from './random.js';
-import { hasMilestone, milestoneRewardView } from '../domain/milestone.js';
+import { hasExpansion } from '../domain/expansion-contract.js';
+import { inventoryLimits, activeItems } from '../domain/inventory.js';
+import { hasMilestone, milestoneRewardView, milestoneRewardViews } from '../domain/milestone.js';
 
 function jsonValue(value) { return JSON.parse(stringifyExact(value)); }
 
@@ -34,6 +36,13 @@ function publicState(runId, state, rules) {
     ...(state.handSequence !== undefined ? { handSequence: state.handSequence, pendingNextHandWeightBuffs: state.pendingNextHandWeightBuffs } : {}),
     ...(hasMilestone(rules) ? { cardChoice:state.phase === 'CARD_CHOICE' ? { slots:state.cardOffer.map(({ slotId }) => ({ slotId })) } : null,
       milestoneReward:milestoneRewardView(state, rules), roundWildAvailable:state.roundWildAvailable } : {}),
+    ...(hasExpansion(rules) ? { inventoryLimits:inventoryLimits(state.items,rules),
+      doublesArmedForNextHand:state.doublesArmedForNextHand, midasDiamondCountThisRound:state.midasDiamondCountThisRound,
+      midasClearBonus:activeItems(state.items,rules,state.roundIndex).filter(i=>rules.itemsById[i.itemId].effect.kind==='coin_on_round_clear_per_physical_symbol_count').reduce((sum,i)=>{
+        const e=rules.itemsById[i.itemId].effect;
+        return sum+Math.min(e.maxCoinsPerRound,Math.floor(state.midasDiamondCountThisRound/e.diamondsPerCoin));
+      },0),
+      milestoneRewards:milestoneRewardViews(state,rules) } : {}),
     items: state.items.map(({ instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins, purchaseCounter, lastTriggeredRound }) => ({
       instanceId, itemId, acquiredOrder, activeFromRound, remainingCharges, remainingSpins, purchaseCounter, lastTriggeredRound,
     })),

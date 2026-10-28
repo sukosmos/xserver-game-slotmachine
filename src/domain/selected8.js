@@ -20,7 +20,7 @@ export function dueWeightBuffs(state, rules, active = activeItems(state.items, r
     requireCondition(buff && !seen.has(buff.sourceInstanceId), 'INVALID_PENDING_BUFF');
     seen.add(buff.sourceInstanceId);
     const source = active.find((instance) => instance.instanceId === buff.sourceInstanceId);
-    if (!source || buff.targetHandSequence !== target || buff.symbol === state.milestoneReward?.removedSymbol) return false;
+    if (!source || buff.targetHandSequence !== target || buff.symbol === [state.milestoneReward,...(state.additionalMilestoneRewards ?? state.milestoneRewards?.slice(1) ?? [])].find(r=>r?.removedSymbol)?.removedSymbol) return false;
     const effect = getItem(rules, source.itemId).effect;
     requireCondition(effect.kind === 'queue_next_hand_weight_if_symbol_absent' && buff.symbol === effect.bonusSymbol && buff.amount === effect.bonusWeight, 'INVALID_PENDING_BUFF');
     return true;

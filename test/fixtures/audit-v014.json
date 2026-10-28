@@ -1,0 +1,1449 @@
+{
+  "format": "slot-audit-v3",
+  "rngVersion": "hmac-sha256-counter-v1",
+  "rulesVersion": "v0.14",
+  "catalogVersion": "v0.14",
+  "linesVersion": "v0.14",
+  "rulesFingerprint": "5456c4947893201297023d91274f45d6fb9cf0063cff8fc8d6f34195e460d2c6",
+  "runId": "v014-before-expansion",
+  "userId": "legacy-fixture",
+  "initialSeed": "1234123412341234123412341234123412341234123412341234123412341234",
+  "initialItemIds": [],
+  "initialState": {
+    "runId": "v014-before-expansion",
+    "rulesVersion": "v0.14",
+    "catalogVersion": "v0.14",
+    "linesVersion": "v0.14",
+    "phase": "ROUND_ACTIVE",
+    "roundIndex": 1,
+    "completedRounds": 0,
+    "roundScore": "0",
+    "runTotalScore": "0",
+    "targetScore": "120",
+    "handsRemaining": 5,
+    "canClaim": false,
+    "revision": 0,
+    "mode": "standard",
+    "canStartEndless": false,
+    "roundHands": 5,
+    "handSequence": 0,
+    "pendingNextHandWeightBuffs": [],
+    "cardChoice": null,
+    "milestoneReward": null,
+    "roundWildAvailable": false,
+    "items": [],
+    "consecutiveWinHands": 0,
+    "coins": 3,
+    "shop": null
+  },
+  "actions": [
+    {
+      "command": {
+        "type": "SPIN",
+        "expectedRevision": 0,
+        "idempotencyKey": "step-0"
+      },
+      "rngBefore": 0,
+      "rngAfter": 9,
+      "randomTrace": [
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 72
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 18
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 70
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 27
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 93
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 47
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 83
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 70
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 42
+        }
+      ],
+      "response": {
+        "state": {
+          "runId": "v014-before-expansion",
+          "rulesVersion": "v0.14",
+          "catalogVersion": "v0.14",
+          "linesVersion": "v0.14",
+          "phase": "ROUND_ACTIVE",
+          "roundIndex": 1,
+          "completedRounds": 0,
+          "roundScore": "30",
+          "runTotalScore": "30",
+          "targetScore": "120",
+          "handsRemaining": 4,
+          "canClaim": false,
+          "revision": 1,
+          "mode": "standard",
+          "canStartEndless": false,
+          "roundHands": 5,
+          "handSequence": 1,
+          "pendingNextHandWeightBuffs": [],
+          "cardChoice": null,
+          "milestoneReward": null,
+          "roundWildAvailable": false,
+          "items": [],
+          "consecutiveWinHands": 0,
+          "coins": 3,
+          "shop": null
+        },
+        "event": {
+          "type": "SPIN_RESOLVED",
+          "rawBoard": [
+            "bell",
+            "cherry",
+            "bell",
+            "cherry",
+            "seven",
+            "lemon",
+            "diamond",
+            "bell",
+            "lemon"
+          ],
+          "board": [
+            "bell",
+            "cherry",
+            "bell",
+            "cherry",
+            "seven",
+            "lemon",
+            "diamond",
+            "bell",
+            "lemon"
+          ],
+          "rawBaseScore": "30",
+          "baseScore": "30",
+          "lineScore": "0",
+          "virtualScore": "0",
+          "globalMultiplier": {
+            "num": "1",
+            "den": "1"
+          },
+          "winningLines": [],
+          "patternScore": "0",
+          "winningPatterns": [],
+          "spinScore": "30",
+          "consecutiveWinHands": 0,
+          "triggeredItems": [],
+          "wildMarks": [],
+          "physicalChanged": false,
+          "handSequence": 1,
+          "consumedWeightBuffs": [],
+          "pendingNextHandWeightBuffs": [],
+          "milestoneWild": false,
+          "effectiveWeights": [
+            {
+              "symbol": "cherry",
+              "weight": 30
+            },
+            {
+              "symbol": "lemon",
+              "weight": 25
+            },
+            {
+              "symbol": "bell",
+              "weight": 20
+            },
+            {
+              "symbol": "diamond",
+              "weight": 15
+            },
+            {
+              "symbol": "seven",
+              "weight": 10
+            }
+          ],
+          "activeEffects": [],
+          "itemsAfterSpin": [],
+          "expiredItems": [],
+          "settlement": null,
+          "emergency": null,
+          "outcome": null,
+          "revision": 1
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "SPIN",
+        "expectedRevision": 1,
+        "idempotencyKey": "step-1"
+      },
+      "rngBefore": 9,
+      "rngAfter": 28,
+      "randomTrace": [
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 66
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 33
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 42
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 2
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 71
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 21
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 74
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 13
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 57
+        },
+        {
+          "purpose": "shop_rarity",
+          "slotId": "round-1-offer-0-slot-0",
+          "bound": 87,
+          "value": 35
+        },
+        {
+          "purpose": "shop_item",
+          "slotId": "round-1-offer-0-slot-0",
+          "bound": 3,
+          "value": 2
+        },
+        {
+          "purpose": "shop_rarity",
+          "slotId": "round-1-offer-0-slot-1",
+          "bound": 87,
+          "value": 70
+        },
+        {
+          "purpose": "shop_item",
+          "slotId": "round-1-offer-0-slot-1",
+          "bound": 2,
+          "value": 1
+        },
+        {
+          "purpose": "shop_rarity",
+          "slotId": "round-1-offer-0-slot-2",
+          "bound": 100,
+          "value": 94
+        },
+        {
+          "purpose": "shop_item",
+          "slotId": "round-1-offer-0-slot-2",
+          "bound": 5,
+          "value": 2
+        },
+        {
+          "purpose": "shop_rarity",
+          "slotId": "round-1-offer-0-slot-3",
+          "bound": 100,
+          "value": 2
+        },
+        {
+          "purpose": "shop_item",
+          "slotId": "round-1-offer-0-slot-3",
+          "bound": 2,
+          "value": 1
+        },
+        {
+          "purpose": "shop_rarity",
+          "slotId": "round-1-offer-0-slot-4",
+          "bound": 100,
+          "value": 50
+        },
+        {
+          "purpose": "shop_item",
+          "slotId": "round-1-offer-0-slot-4",
+          "bound": 1,
+          "value": 0
+        }
+      ],
+      "response": {
+        "state": {
+          "runId": "v014-before-expansion",
+          "rulesVersion": "v0.14",
+          "catalogVersion": "v0.14",
+          "linesVersion": "v0.14",
+          "phase": "SHOP",
+          "roundIndex": 1,
+          "completedRounds": 1,
+          "roundScore": "169",
+          "runTotalScore": "169",
+          "targetScore": "120",
+          "handsRemaining": 3,
+          "canClaim": false,
+          "revision": 2,
+          "mode": "standard",
+          "canStartEndless": false,
+          "roundHands": 5,
+          "handSequence": 2,
+          "pendingNextHandWeightBuffs": [],
+          "cardChoice": null,
+          "milestoneReward": null,
+          "roundWildAvailable": false,
+          "items": [],
+          "consecutiveWinHands": 1,
+          "coins": 10,
+          "shop": {
+            "offerSequence": 0,
+            "paidRerolls": 0,
+            "freeRerollsUsed": 0,
+            "freeRerollsRemaining": 0,
+            "rerollPrice": 1,
+            "canReroll": true,
+            "rerollBlockedReason": null,
+            "slots": [
+              {
+                "slotId": "round-1-offer-0-slot-0",
+                "itemId": "resonance_hammer",
+                "soldOut": false,
+                "group": "upgrade",
+                "price": 3,
+                "canBuy": true,
+                "blockedReason": null
+              },
+              {
+                "slotId": "round-1-offer-0-slot-1",
+                "itemId": "lucky_crown",
+                "soldOut": false,
+                "group": "upgrade",
+                "price": 3,
+                "canBuy": true,
+                "blockedReason": null
+              },
+              {
+                "slotId": "round-1-offer-0-slot-2",
+                "itemId": "haggler",
+                "soldOut": false,
+                "group": "item",
+                "price": 8,
+                "canBuy": true,
+                "blockedReason": null
+              },
+              {
+                "slotId": "round-1-offer-0-slot-3",
+                "itemId": "receipt_collector",
+                "soldOut": false,
+                "group": "item",
+                "price": 3,
+                "canBuy": true,
+                "blockedReason": null
+              },
+              {
+                "slotId": "round-1-offer-0-slot-4",
+                "itemId": "piggy_bank",
+                "soldOut": false,
+                "group": "item",
+                "price": 3,
+                "canBuy": true,
+                "blockedReason": null
+              }
+            ]
+          }
+        },
+        "event": {
+          "type": "SPIN_RESOLVED",
+          "rawBoard": [
+            "bell",
+            "lemon",
+            "lemon",
+            "cherry",
+            "bell",
+            "cherry",
+            "bell",
+            "cherry",
+            "bell"
+          ],
+          "board": [
+            "bell",
+            "lemon",
+            "lemon",
+            "cherry",
+            "bell",
+            "cherry",
+            "bell",
+            "cherry",
+            "bell"
+          ],
+          "rawBaseScore": "19",
+          "baseScore": "19",
+          "lineScore": "120",
+          "virtualScore": "0",
+          "globalMultiplier": {
+            "num": "1",
+            "den": "1"
+          },
+          "winningLines": [
+            {
+              "lineId": "diag_main",
+              "symbol": "bell",
+              "score": "120",
+              "basePayout": "120",
+              "factor": {
+                "num": "1",
+                "den": "1"
+              }
+            }
+          ],
+          "patternScore": "0",
+          "winningPatterns": [],
+          "spinScore": "139",
+          "consecutiveWinHands": 1,
+          "triggeredItems": [],
+          "wildMarks": [],
+          "physicalChanged": false,
+          "handSequence": 2,
+          "consumedWeightBuffs": [],
+          "pendingNextHandWeightBuffs": [],
+          "milestoneWild": false,
+          "effectiveWeights": [
+            {
+              "symbol": "cherry",
+              "weight": 30
+            },
+            {
+              "symbol": "lemon",
+              "weight": 25
+            },
+            {
+              "symbol": "bell",
+              "weight": 20
+            },
+            {
+              "symbol": "diamond",
+              "weight": 15
+            },
+            {
+              "symbol": "seven",
+              "weight": 10
+            }
+          ],
+          "activeEffects": [],
+          "itemsAfterSpin": [],
+          "expiredItems": [],
+          "settlement": {
+            "coinsBefore": 3,
+            "baseReward": 4,
+            "itemBaseBonus": 0,
+            "handBonus": 3,
+            "interest": 0,
+            "interestCap": 2,
+            "bonusCoins": 0,
+            "reward": 7,
+            "coinsAfterReward": 10,
+            "triggeredItems": []
+          },
+          "emergency": null,
+          "outcome": "ROUND_AUTO_CLEARED",
+          "revision": 2
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "CONTINUE",
+        "expectedRevision": 2,
+        "idempotencyKey": "step-2"
+      },
+      "rngBefore": 28,
+      "rngAfter": 28,
+      "randomTrace": [],
+      "response": {
+        "state": {
+          "runId": "v014-before-expansion",
+          "rulesVersion": "v0.14",
+          "catalogVersion": "v0.14",
+          "linesVersion": "v0.14",
+          "phase": "ROUND_ACTIVE",
+          "roundIndex": 2,
+          "completedRounds": 1,
+          "roundScore": "0",
+          "runTotalScore": "169",
+          "targetScore": "220",
+          "handsRemaining": 5,
+          "canClaim": false,
+          "revision": 3,
+          "mode": "standard",
+          "canStartEndless": false,
+          "roundHands": 5,
+          "handSequence": 2,
+          "pendingNextHandWeightBuffs": [],
+          "cardChoice": null,
+          "milestoneReward": null,
+          "roundWildAvailable": false,
+          "items": [],
+          "consecutiveWinHands": 1,
+          "coins": 10,
+          "shop": null
+        },
+        "event": {
+          "type": "ROUND_STARTED",
+          "roundIndex": 2,
+          "revision": 3
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "SPIN",
+        "expectedRevision": 3,
+        "idempotencyKey": "step-3"
+      },
+      "rngBefore": 28,
+      "rngAfter": 37,
+      "randomTrace": [
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 66
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 97
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 66
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 96
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 11
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 15
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 85
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 65
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 28
+        }
+      ],
+      "response": {
+        "state": {
+          "runId": "v014-before-expansion",
+          "rulesVersion": "v0.14",
+          "catalogVersion": "v0.14",
+          "linesVersion": "v0.14",
+          "phase": "ROUND_ACTIVE",
+          "roundIndex": 2,
+          "completedRounds": 1,
+          "roundScore": "37",
+          "runTotalScore": "206",
+          "targetScore": "220",
+          "handsRemaining": 4,
+          "canClaim": false,
+          "revision": 4,
+          "mode": "standard",
+          "canStartEndless": false,
+          "roundHands": 5,
+          "handSequence": 3,
+          "pendingNextHandWeightBuffs": [],
+          "cardChoice": null,
+          "milestoneReward": null,
+          "roundWildAvailable": false,
+          "items": [],
+          "consecutiveWinHands": 0,
+          "coins": 10,
+          "shop": null
+        },
+        "event": {
+          "type": "SPIN_RESOLVED",
+          "rawBoard": [
+            "bell",
+            "seven",
+            "bell",
+            "seven",
+            "cherry",
+            "cherry",
+            "diamond",
+            "bell",
+            "cherry"
+          ],
+          "board": [
+            "bell",
+            "seven",
+            "bell",
+            "seven",
+            "cherry",
+            "cherry",
+            "diamond",
+            "bell",
+            "cherry"
+          ],
+          "rawBaseScore": "37",
+          "baseScore": "37",
+          "lineScore": "0",
+          "virtualScore": "0",
+          "globalMultiplier": {
+            "num": "1",
+            "den": "1"
+          },
+          "winningLines": [],
+          "patternScore": "0",
+          "winningPatterns": [],
+          "spinScore": "37",
+          "consecutiveWinHands": 0,
+          "triggeredItems": [],
+          "wildMarks": [],
+          "physicalChanged": false,
+          "handSequence": 3,
+          "consumedWeightBuffs": [],
+          "pendingNextHandWeightBuffs": [],
+          "milestoneWild": false,
+          "effectiveWeights": [
+            {
+              "symbol": "cherry",
+              "weight": 30
+            },
+            {
+              "symbol": "lemon",
+              "weight": 25
+            },
+            {
+              "symbol": "bell",
+              "weight": 20
+            },
+            {
+              "symbol": "diamond",
+              "weight": 15
+            },
+            {
+              "symbol": "seven",
+              "weight": 10
+            }
+          ],
+          "activeEffects": [],
+          "itemsAfterSpin": [],
+          "expiredItems": [],
+          "settlement": null,
+          "emergency": null,
+          "outcome": null,
+          "revision": 4
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "SPIN",
+        "expectedRevision": 4,
+        "idempotencyKey": "step-4"
+      },
+      "rngBefore": 37,
+      "rngAfter": 46,
+      "randomTrace": [
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 3
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 41
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 71
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 59
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 49
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 42
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 30
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 1
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 10
+        }
+      ],
+      "response": {
+        "state": {
+          "runId": "v014-before-expansion",
+          "rulesVersion": "v0.14",
+          "catalogVersion": "v0.14",
+          "linesVersion": "v0.14",
+          "phase": "ROUND_ACTIVE",
+          "roundIndex": 2,
+          "completedRounds": 1,
+          "roundScore": "54",
+          "runTotalScore": "223",
+          "targetScore": "220",
+          "handsRemaining": 3,
+          "canClaim": false,
+          "revision": 5,
+          "mode": "standard",
+          "canStartEndless": false,
+          "roundHands": 5,
+          "handSequence": 4,
+          "pendingNextHandWeightBuffs": [],
+          "cardChoice": null,
+          "milestoneReward": null,
+          "roundWildAvailable": false,
+          "items": [],
+          "consecutiveWinHands": 0,
+          "coins": 10,
+          "shop": null
+        },
+        "event": {
+          "type": "SPIN_RESOLVED",
+          "rawBoard": [
+            "cherry",
+            "lemon",
+            "bell",
+            "bell",
+            "lemon",
+            "lemon",
+            "lemon",
+            "cherry",
+            "cherry"
+          ],
+          "board": [
+            "cherry",
+            "lemon",
+            "bell",
+            "bell",
+            "lemon",
+            "lemon",
+            "lemon",
+            "cherry",
+            "cherry"
+          ],
+          "rawBaseScore": "17",
+          "baseScore": "17",
+          "lineScore": "0",
+          "virtualScore": "0",
+          "globalMultiplier": {
+            "num": "1",
+            "den": "1"
+          },
+          "winningLines": [],
+          "patternScore": "0",
+          "winningPatterns": [],
+          "spinScore": "17",
+          "consecutiveWinHands": 0,
+          "triggeredItems": [],
+          "wildMarks": [],
+          "physicalChanged": false,
+          "handSequence": 4,
+          "consumedWeightBuffs": [],
+          "pendingNextHandWeightBuffs": [],
+          "milestoneWild": false,
+          "effectiveWeights": [
+            {
+              "symbol": "cherry",
+              "weight": 30
+            },
+            {
+              "symbol": "lemon",
+              "weight": 25
+            },
+            {
+              "symbol": "bell",
+              "weight": 20
+            },
+            {
+              "symbol": "diamond",
+              "weight": 15
+            },
+            {
+              "symbol": "seven",
+              "weight": 10
+            }
+          ],
+          "activeEffects": [],
+          "itemsAfterSpin": [],
+          "expiredItems": [],
+          "settlement": null,
+          "emergency": null,
+          "outcome": null,
+          "revision": 5
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "SPIN",
+        "expectedRevision": 5,
+        "idempotencyKey": "step-5"
+      },
+      "rngBefore": 46,
+      "rngAfter": 55,
+      "randomTrace": [
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 72
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 0
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 90
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 69
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 59
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 72
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 39
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 91
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 44
+        }
+      ],
+      "response": {
+        "state": {
+          "runId": "v014-before-expansion",
+          "rulesVersion": "v0.14",
+          "catalogVersion": "v0.14",
+          "linesVersion": "v0.14",
+          "phase": "ROUND_ACTIVE",
+          "roundIndex": 2,
+          "completedRounds": 1,
+          "roundScore": "211",
+          "runTotalScore": "380",
+          "targetScore": "220",
+          "handsRemaining": 2,
+          "canClaim": false,
+          "revision": 6,
+          "mode": "standard",
+          "canStartEndless": false,
+          "roundHands": 5,
+          "handSequence": 5,
+          "pendingNextHandWeightBuffs": [],
+          "cardChoice": null,
+          "milestoneReward": null,
+          "roundWildAvailable": false,
+          "items": [],
+          "consecutiveWinHands": 1,
+          "coins": 10,
+          "shop": null
+        },
+        "event": {
+          "type": "SPIN_RESOLVED",
+          "rawBoard": [
+            "bell",
+            "cherry",
+            "seven",
+            "bell",
+            "bell",
+            "bell",
+            "lemon",
+            "seven",
+            "lemon"
+          ],
+          "board": [
+            "bell",
+            "cherry",
+            "seven",
+            "bell",
+            "bell",
+            "bell",
+            "lemon",
+            "seven",
+            "lemon"
+          ],
+          "rawBaseScore": "37",
+          "baseScore": "37",
+          "lineScore": "120",
+          "virtualScore": "0",
+          "globalMultiplier": {
+            "num": "1",
+            "den": "1"
+          },
+          "winningLines": [
+            {
+              "lineId": "row_middle",
+              "symbol": "bell",
+              "score": "120",
+              "basePayout": "120",
+              "factor": {
+                "num": "1",
+                "den": "1"
+              }
+            }
+          ],
+          "patternScore": "0",
+          "winningPatterns": [],
+          "spinScore": "157",
+          "consecutiveWinHands": 1,
+          "triggeredItems": [],
+          "wildMarks": [],
+          "physicalChanged": false,
+          "handSequence": 5,
+          "consumedWeightBuffs": [],
+          "pendingNextHandWeightBuffs": [],
+          "milestoneWild": false,
+          "effectiveWeights": [
+            {
+              "symbol": "cherry",
+              "weight": 30
+            },
+            {
+              "symbol": "lemon",
+              "weight": 25
+            },
+            {
+              "symbol": "bell",
+              "weight": 20
+            },
+            {
+              "symbol": "diamond",
+              "weight": 15
+            },
+            {
+              "symbol": "seven",
+              "weight": 10
+            }
+          ],
+          "activeEffects": [],
+          "itemsAfterSpin": [],
+          "expiredItems": [],
+          "settlement": null,
+          "emergency": null,
+          "outcome": null,
+          "revision": 6
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "SPIN",
+        "expectedRevision": 6,
+        "idempotencyKey": "step-6"
+      },
+      "rngBefore": 55,
+      "rngAfter": 74,
+      "randomTrace": [
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 37
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 86
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 25
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 0
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 33
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 7
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 35
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 2
+        },
+        {
+          "purpose": "board_cell",
+          "instanceId": null,
+          "bound": 100,
+          "value": 33
+        },
+        {
+          "purpose": "shop_rarity",
+          "slotId": "round-2-offer-0-slot-0",
+          "bound": 87,
+          "value": 81
+        },
+        {
+          "purpose": "shop_item",
+          "slotId": "round-2-offer-0-slot-0",
+          "bound": 2,
+          "value": 1
+        },
+        {
+          "purpose": "shop_rarity",
+          "slotId": "round-2-offer-0-slot-1",
+          "bound": 87,
+          "value": 25
+        },
+        {
+          "purpose": "shop_item",
+          "slotId": "round-2-offer-0-slot-1",
+          "bound": 3,
+          "value": 2
+        },
+        {
+          "purpose": "shop_rarity",
+          "slotId": "round-2-offer-0-slot-2",
+          "bound": 100,
+          "value": 41
+        },
+        {
+          "purpose": "shop_item",
+          "slotId": "round-2-offer-0-slot-2",
+          "bound": 2,
+          "value": 0
+        },
+        {
+          "purpose": "shop_rarity",
+          "slotId": "round-2-offer-0-slot-3",
+          "bound": 100,
+          "value": 97
+        },
+        {
+          "purpose": "shop_item",
+          "slotId": "round-2-offer-0-slot-3",
+          "bound": 3,
+          "value": 0
+        },
+        {
+          "purpose": "shop_rarity",
+          "slotId": "round-2-offer-0-slot-4",
+          "bound": 100,
+          "value": 13
+        },
+        {
+          "purpose": "shop_item",
+          "slotId": "round-2-offer-0-slot-4",
+          "bound": 1,
+          "value": 0
+        }
+      ],
+      "response": {
+        "state": {
+          "runId": "v014-before-expansion",
+          "rulesVersion": "v0.14",
+          "catalogVersion": "v0.14",
+          "linesVersion": "v0.14",
+          "phase": "SHOP",
+          "roundIndex": 2,
+          "completedRounds": 2,
+          "roundScore": "288",
+          "runTotalScore": "457",
+          "targetScore": "220",
+          "handsRemaining": 1,
+          "canClaim": false,
+          "revision": 7,
+          "mode": "standard",
+          "canStartEndless": false,
+          "roundHands": 5,
+          "handSequence": 6,
+          "pendingNextHandWeightBuffs": [],
+          "cardChoice": null,
+          "milestoneReward": null,
+          "roundWildAvailable": false,
+          "items": [],
+          "consecutiveWinHands": 2,
+          "coins": 18,
+          "shop": {
+            "offerSequence": 0,
+            "paidRerolls": 0,
+            "freeRerollsUsed": 0,
+            "freeRerollsRemaining": 0,
+            "rerollPrice": 1,
+            "canReroll": true,
+            "rerollBlockedReason": null,
+            "slots": [
+              {
+                "slotId": "round-2-offer-0-slot-0",
+                "itemId": "lucky_crown",
+                "soldOut": false,
+                "group": "upgrade",
+                "price": 3,
+                "canBuy": true,
+                "blockedReason": null
+              },
+              {
+                "slotId": "round-2-offer-0-slot-1",
+                "itemId": "resonance_hammer",
+                "soldOut": false,
+                "group": "upgrade",
+                "price": 3,
+                "canBuy": true,
+                "blockedReason": null
+              },
+              {
+                "slotId": "round-2-offer-0-slot-2",
+                "itemId": "piggy_bank",
+                "soldOut": false,
+                "group": "item",
+                "price": 3,
+                "canBuy": true,
+                "blockedReason": null
+              },
+              {
+                "slotId": "round-2-offer-0-slot-3",
+                "itemId": "jackpot_crown",
+                "soldOut": false,
+                "group": "item",
+                "price": 8,
+                "canBuy": true,
+                "blockedReason": null
+              },
+              {
+                "slotId": "round-2-offer-0-slot-4",
+                "itemId": "receipt_collector",
+                "soldOut": false,
+                "group": "item",
+                "price": 3,
+                "canBuy": true,
+                "blockedReason": null
+              }
+            ]
+          }
+        },
+        "event": {
+          "type": "SPIN_RESOLVED",
+          "rawBoard": [
+            "lemon",
+            "diamond",
+            "cherry",
+            "cherry",
+            "lemon",
+            "cherry",
+            "lemon",
+            "cherry",
+            "lemon"
+          ],
+          "board": [
+            "lemon",
+            "diamond",
+            "cherry",
+            "cherry",
+            "lemon",
+            "cherry",
+            "lemon",
+            "cherry",
+            "lemon"
+          ],
+          "rawBaseScore": "17",
+          "baseScore": "17",
+          "lineScore": "60",
+          "virtualScore": "0",
+          "globalMultiplier": {
+            "num": "1",
+            "den": "1"
+          },
+          "winningLines": [
+            {
+              "lineId": "diag_main",
+              "symbol": "lemon",
+              "score": "60",
+              "basePayout": "60",
+              "factor": {
+                "num": "1",
+                "den": "1"
+              }
+            }
+          ],
+          "patternScore": "0",
+          "winningPatterns": [],
+          "spinScore": "77",
+          "consecutiveWinHands": 2,
+          "triggeredItems": [],
+          "wildMarks": [],
+          "physicalChanged": false,
+          "handSequence": 6,
+          "consumedWeightBuffs": [],
+          "pendingNextHandWeightBuffs": [],
+          "milestoneWild": false,
+          "effectiveWeights": [
+            {
+              "symbol": "cherry",
+              "weight": 30
+            },
+            {
+              "symbol": "lemon",
+              "weight": 25
+            },
+            {
+              "symbol": "bell",
+              "weight": 20
+            },
+            {
+              "symbol": "diamond",
+              "weight": 15
+            },
+            {
+              "symbol": "seven",
+              "weight": 10
+            }
+          ],
+          "activeEffects": [],
+          "itemsAfterSpin": [],
+          "expiredItems": [],
+          "settlement": {
+            "coinsBefore": 10,
+            "baseReward": 5,
+            "itemBaseBonus": 0,
+            "handBonus": 1,
+            "interest": 2,
+            "interestCap": 2,
+            "bonusCoins": 0,
+            "reward": 8,
+            "coinsAfterReward": 18,
+            "triggeredItems": []
+          },
+          "emergency": null,
+          "outcome": "ROUND_AUTO_CLEARED",
+          "revision": 7
+        }
+      }
+    },
+    {
+      "command": {
+        "type": "CONTINUE",
+        "expectedRevision": 7,
+        "idempotencyKey": "step-7"
+      },
+      "rngBefore": 74,
+      "rngAfter": 74,
+      "randomTrace": [],
+      "response": {
+        "state": {
+          "runId": "v014-before-expansion",
+          "rulesVersion": "v0.14",
+          "catalogVersion": "v0.14",
+          "linesVersion": "v0.14",
+          "phase": "ROUND_ACTIVE",
+          "roundIndex": 3,
+          "completedRounds": 2,
+          "roundScore": "0",
+          "runTotalScore": "457",
+          "targetScore": "400",
+          "handsRemaining": 5,
+          "canClaim": false,
+          "revision": 8,
+          "mode": "standard",
+          "canStartEndless": false,
+          "roundHands": 5,
+          "handSequence": 6,
+          "pendingNextHandWeightBuffs": [],
+          "cardChoice": null,
+          "milestoneReward": null,
+          "roundWildAvailable": false,
+          "items": [],
+          "consecutiveWinHands": 2,
+          "coins": 18,
+          "shop": null
+        },
+        "event": {
+          "type": "ROUND_STARTED",
+          "roundIndex": 3,
+          "revision": 8
+        }
+      }
+    }
+  ],
+  "finalState": {
+    "runId": "v014-before-expansion",
+    "rulesVersion": "v0.14",
+    "catalogVersion": "v0.14",
+    "linesVersion": "v0.14",
+    "phase": "ROUND_ACTIVE",
+    "roundIndex": 3,
+    "completedRounds": 2,
+    "roundScore": "0",
+    "runTotalScore": "457",
+    "targetScore": "400",
+    "handsRemaining": 5,
+    "canClaim": false,
+    "revision": 8,
+    "mode": "standard",
+    "canStartEndless": false,
+    "roundHands": 5,
+    "handSequence": 6,
+    "pendingNextHandWeightBuffs": [],
+    "cardChoice": null,
+    "milestoneReward": null,
+    "roundWildAvailable": false,
+    "items": [],
+    "consecutiveWinHands": 2,
+    "coins": 18,
+    "shop": null
+  }
+}

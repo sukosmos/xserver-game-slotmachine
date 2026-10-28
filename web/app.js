@@ -22,7 +22,7 @@ const icon = (name, className = '') => `<svg class="icon ${className}" aria-hidd
 const number = (value, className = '') => `<button class="score-number ${className}" data-action="score" data-value="${esc(value)}" title="${exactScore(value)}" aria-label="${exactScore(value)}점, 전체 숫자 보기">${compactScore(value)}</button>`;
 const itemOf = (id) => catalog?.items.find((item) => item.id === id);
 const stackLabel = (item) => item.maxStacks === null ? '중첩 무제한' : `최대 ${item.maxStacks}개`;
-const itemIcon = (item) => ({ seven_tracker: 'seven', mirror_copier: 'mirror', temporary_wild: 'spark', corner_collector: 'corners', crossroads_bonus: 'crossing', receipt_collector: 'receipt', emergency_lever: 'hand', editors_proof: 'edit' })[item.id] ?? item.effect.symbol ?? (item.effect.kind === 'square_match_bonus' ? 'square' : item.category === 'resource' ? 'hand' : item.category === 'economy' ? 'coin' : item.category === 'board' ? 'spark' : 'crown');
+const itemIcon = (item) => ({ survival_bag: 'survival_bag', rock_bottom: 'rock_bottom', emils_shop: 'emils_shop', help_hand: 'help_hand', kaijis_dice: 'kaijis_dice', midas_hand: 'midas_hand', doubles: 'doubles', hootie_fruitie: 'hootie_fruitie',  seven_tracker: 'seven', mirror_copier: 'mirror', temporary_wild: 'spark', corner_collector: 'corners', crossroads_bonus: 'crossing', receipt_collector: 'receipt', emergency_lever: 'hand', editors_proof: 'edit' })[item.id] ?? item.effect.symbol ?? (item.effect.kind === 'square_match_bonus' ? 'square' : item.category === 'resource' ? 'hand' : item.category === 'economy' ? 'coin' : item.category === 'board' ? 'spark' : 'crown');
 const ended = () => run && ['RUN_WON', 'RUN_FAILED'].includes(run.phase);
 const blocked = () => busy || Boolean(client.pending());
 const button = (label, action, { disabled = false, className = 'secondary', value = '' } = {}) => `<button class="${className}" data-action="${action}" data-value="${esc(value)}" ${disabled ? 'disabled' : ''}>${label}</button>`;
@@ -33,6 +33,8 @@ function notice(text = '', error = false, quiet = false) {
 }
 function lifetime(item, instance) {
   const pending = instance && !isActive(instance) ? `R${instance.activeFromRound}부터 · ` : '';
+  if (item.slot === 'none') return item.id === 'emils_shop' ? '즉시 · 점유 0' : '영구 · 점유 0';
+  if (item.slot === 'round') return instance ? (instance.activeFromRound > run.roundIndex ? `R${instance.activeFromRound} 한 라운드` : '이번 라운드') : '다음 한 라운드';
   if (item.slot === 'charged') return `${pending}발동 ${instance?.remainingCharges ?? item.initialCharges}회`;
   if (item.slot === 'timed') return `${pending}${instance?.remainingSpins ?? item.durationSpins} Hand`;
   return `${pending}${item.inventoryGroup === 'upgrade' ? '강화' : '영구'}`;
@@ -69,8 +71,9 @@ function renderCardScene() {
   }).join('')}</div><div class="card-result" role="status">${reward ? `<strong>${esc(reward.name)}</strong><p>${esc(reward.summary)}</p>` : '<small>한 장의 보상을 받습니다</small>'}</div></section>`;
 }
 function renderBlessing() {
-  const reward = run?.milestoneReward;
-  if (!reward) return '';
+  return (run?.milestoneRewards ?? [run?.milestoneReward].filter(Boolean)).map(renderReward).join('');
+}
+function renderReward(reward) {
   const wild = reward.cardId === 'wild';
   return `<section class="blessing" aria-label="카드 보상">${icon(reward.removedSymbol ?? (wild ? 'spark' : reward.cardId === 'windfall' ? 'coin' : 'crown'))}<div><strong>${esc(reward.name)}</strong><p>${esc(reward.summary)}</p></div>${wild && run.phase === 'ROUND_ACTIVE' ? `<small>${reward.includesLastHand ? run.roundWildAvailable ? '첫·마지막 대기' : run.handsRemaining === 1 ? '마지막 준비' : '마지막 대기' : run.roundWildAvailable ? '이번 라운드 대기' : '이번 라운드 사용'}</small>` : `<small>${reward.coinsGranted ? '지급 완료' : '영구'}</small>`}</section>`;
 }
@@ -109,13 +112,16 @@ function renderBreakdown() {
   if (!lastSpin) return '';
   const triggered = presentation?.effects.map((effect) => `${effect.name} ${effect.label}`) ?? lastSpin.triggeredItems.map((t) => itemOf(t.itemId)?.nameKo).filter(Boolean);
   const expired = lastSpin.expiredItems.map((t) => itemOf(t.itemId)?.nameKo).filter(Boolean);
-  return `<details class="breakdown"><summary>점수 내역 <span>+${compactScore(lastSpin.spinScore)} ⌄</span></summary><dl><div><dt>심벌 점수</dt><dd>${exactScore(lastSpin.baseScore)}</dd></div><div><dt>라인 배당</dt><dd>${exactScore(lastSpin.lineScore)}</dd></div>${BigInt(lastSpin.patternScore ?? '0') > 0n ? `<div><dt>패턴 배당</dt><dd>${exactScore(lastSpin.patternScore)}</dd></div>` : ''}${lastSpin.virtualScore !== '0' ? `<div><dt>가상 배당</dt><dd>${exactScore(lastSpin.virtualScore)}</dd></div>` : ''}<div><dt>전체 배수</dt><dd>${esc(presentation?.multiplier ?? '—')}</dd></div><div><dt>최종 점수</dt><dd>${exactScore(lastSpin.spinScore)}</dd></div></dl>${triggered.length ? `<p>발동: ${esc(triggered.join(', '))}</p>` : ''}${expired.length ? `<p>만료: ${esc(expired.join(', '))}</p>` : ''}${button('보드 전후', 'before-after', { className: 'text-button' })}</details>`;
+  return `<details class="breakdown"><summary>점수 내역 <span>+${compactScore(lastSpin.spinScore)} ⌄</span></summary><dl><div><dt>심벌 점수</dt><dd>${exactScore(lastSpin.baseScore)}</dd></div><div><dt>라인 배당</dt><dd>${exactScore(lastSpin.lineScore)}</dd></div>${BigInt(lastSpin.patternScore ?? '0') > 0n ? `<div><dt>패턴 배당</dt><dd>${exactScore(lastSpin.patternScore)}</dd></div>` : ''}${BigInt(lastSpin.specialFlatBonus ?? '0') > 0n ? `<div><dt>록 바텀</dt><dd>${exactScore(lastSpin.specialFlatBonus)}</dd></div>` : ''}${lastSpin.virtualScore !== '0' ? `<div><dt>가상 배당</dt><dd>${exactScore(lastSpin.virtualScore)}</dd></div>` : ''}<div><dt>전체 배수</dt><dd>${esc(presentation?.multiplier ?? '—')}</dd></div><div><dt>최종 점수</dt><dd>${exactScore(lastSpin.spinScore)}</dd></div></dl>${triggered.length ? `<p>발동: ${esc(triggered.join(', '))}</p>` : ''}${expired.length ? `<p>만료: ${esc(expired.join(', '))}</p>` : ''}${button('보드 전후', 'before-after', { className: 'text-button' })}</details>`;
 }
 function isActive(instance) {
   return instance.activeFromRound <= run.roundIndex || itemOf(instance.itemId).effect.kind === 'shop_item_cost_subtract';
 }
 function instanceStatus(item, instance) {
   if (item.effect.triggerPolicy && instance.lastTriggeredRound === run?.roundIndex && run.phase === 'ROUND_ACTIVE') return '이번 라운드 사용';
+  if (item.id === 'kaijis_dice' && isActive(instance)) return (selectedBuild()?.procChances ?? []).filter(p=>p.available && p.effectiveBp!==p.baseBp).map(p=>`${itemOf(p.itemId).nameKo} ${p.baseBp/100}%→${p.effectiveBp/100}%`).join(' · ') || '확률형 아이템과 함께 적용';
+  if (item.id === 'doubles' && run?.doublesArmedForNextHand) return 'NEXT ×2';
+  if (item.id === 'midas_hand' && isActive(instance)) return `다이아 누적 ${run.midasDiamondCountThisRound ?? 0}개 · 클리어 +${run.midasClearBonus ?? 0}코인`;
   if (instance.purchaseCounter !== undefined) return `구매 ${instance.purchaseCounter}/${item.effect.purchasesPerRefund}`;
   const pending = run?.pendingNextHandWeightBuffs?.find((buff) => buff.sourceInstanceId === instance.instanceId);
   return pending ? `다음 스핀 세븐 +${pending.amount}` : '';
@@ -123,11 +129,11 @@ function instanceStatus(item, instance) {
 function renderInventory() {
   const inventory = run?.items ?? [], ids = [...new Set(inventory.map(item => item.itemId))];
   const groupOf = item => item.inventoryGroup ?? (item.slot === 'permanent' ? 'permanent' : 'limited');
-  const groups = [['permanent','영구',catalog.permanentSlots],['limited','제한',catalog.limitedSlots], ...(catalog.upgradeItemIds ? [['upgrade','강화',null]] : [])];
+  const groups = [['permanent','영구',run?.inventoryLimits?.permanent ?? catalog.permanentSlots],['limited','제한',run?.inventoryLimits?.limited ?? catalog.limitedSlots], ...(ids.some(id=>groupOf(itemOf(id))==='slotless') ? [['slotless','슬롯 없음',null]] : []), ...(catalog.upgradeItemIds ? [['upgrade','강화',null]] : [])];
   return `<section class="inventory"><div class="section-title"><h2>아이템</h2></div>${groups.map(([group,label,limit]) => {
     const selected = ids.filter(id => groupOf(itemOf(id)) === group);
     const count = group === 'limited' ? inventory.filter(i => groupOf(itemOf(i.itemId)) === group).length : selected.length;
-    return `<div class="inventory-group"><h3>${label}<small>${limit === null ? `${count}종 · 무제한` : `${count}/${limit}`}</small></h3>${selected.length ? `<div class="inventory-grid">${selected.map(id => {
+    return `<div class="inventory-group"><h3>${label}<small>${limit === null ? (group === 'slotless' ? '점유 0' : `${count}종 · 무제한`) : `${count}/${limit}`}</small></h3>${selected.length ? `<div class="inventory-grid">${selected.map(id => {
       const item=itemOf(id), instances=inventory.filter(i=>i.itemId===id), active=instances.filter(isActive).length;
       const status=item.slot!=='permanent' ? `${lifetime(item,instances[0])}${instanceStatus(item,instances[0]) ? ` · ${instanceStatus(item,instances[0])}` : ''}` : active===0 ? '다음 라운드' : instanceStatus(item,instances[0]) || (active===instances.length ? '적용 중' : `적용 ${active} · 다음 ${instances.length-active}`);
       return `<button class="inventory-item ${item.rarity}" data-action="owned" data-value="${id}">${icon(itemIcon(item))}<span><strong>${esc(item.nameKo)}${instances.length>1 ? ` ×${instances.length}` : ''}</strong><small>${status}</small></span></button>`;
@@ -160,18 +166,18 @@ async function showRank(id) {
   try {
     const {snapshot:s,playerId:owner}=await client.get(`/leaderboard/${encodeURIComponent(id)}`);
     if(request!==rankRequest || !$('#details').open) return;
-    const groups=[['permanent','영구',s.permanentSlots],['limited','제한',s.limitedSlots],...(s.hasUpgradeGroup ? [['upgrade','강화',null]] : [])];
+    const groups=[['permanent','영구',s.permanentSlots],['limited','제한',s.limitedSlots],...(s.items.some(i=>i.group==='slotless') ? [['slotless','슬롯 없음',null]] : []),...(s.hasUpgradeGroup ? [['upgrade','강화',null]] : [])];
     const score=value=>`<span title="${exactScore(value)}">${compactScore(value)}</span>`;
-    details(`<h2>${owner===playerId ? '내 기록' : `PLAYER ${esc(owner.slice(0,6).toUpperCase())}`}</h2><p class="rank-subtitle">R${s.roundIndex} · ${s.mode==='endless' ? 'ENDLESS · ' : ''}${s.outcome==='RUN_WON' ? '클리어' : '종료'} · ${esc(s.rulesVersion)}</p><div class="rank-summary"><div><small>완료 라운드</small><strong>${s.completedRounds}</strong></div><div><small>누적 점수</small><strong>${score(s.runTotalScore)}</strong></div><div><small>라운드 점수 / 목표</small><strong>${score(s.roundScore)} / ${score(s.targetScore)}</strong></div></div><p class="muted">마지막 스핀 기준 · 소모된 아이템 포함</p><div class="rank-build-layout"><section><h3>슬롯 스탯</h3><table class="symbol-table"><caption>기본 → 적용</caption><thead><tr><th>심벌</th><th>1칸 점수</th><th>3개 배당</th><th>추첨 확률</th></tr></thead><tbody>${s.build.symbols.map(row=>`<tr><th scope="row">${icon(row.id)}<span class="sr-only">${esc(catalog.symbols.find(symbol=>symbol.id===row.id)?.name ?? row.id)}</span></th><td title="${exactScore(row.point)}">${statChange(row.basePoint,row.point)}</td><td title="${exactScore(row.linePayout)}">${statChange(row.baseLinePayout,row.linePayout)}</td><td title="가중치 ${row.weight} / ${s.build.totalWeight}">${statChange(row.baseProbability,row.probability,true)}<small class="rank-weight">가중치 ${row.weight}</small></td></tr>`).join('')}</tbody></table><dl><div><dt>라운드 Hand</dt><dd>${s.build.hands}</dd></div><div><dt>연속 당첨</dt><dd>${s.consecutiveWinHands}</dd></div></dl>${s.build.milestoneReward ? `<div class="rank-blessing"><strong>${esc(s.build.milestoneReward.name)}</strong><p>${esc(s.build.milestoneReward.summary)}</p></div>` : ''}${groups.map(([group,label,limit])=>{
+    details(`<h2>${owner===playerId ? '내 기록' : `PLAYER ${esc(owner.slice(0,6).toUpperCase())}`}</h2><p class="rank-subtitle">R${s.roundIndex} · ${s.mode==='endless' ? 'ENDLESS · ' : ''}${s.outcome==='RUN_WON' ? '클리어' : '종료'} · ${esc(s.rulesVersion)}</p><div class="rank-summary"><div><small>완료 라운드</small><strong>${s.completedRounds}</strong></div><div><small>누적 점수</small><strong>${score(s.runTotalScore)}</strong></div><div><small>라운드 점수 / 목표</small><strong>${score(s.roundScore)} / ${score(s.targetScore)}</strong></div></div><p class="muted">마지막 스핀 기준 · 소모된 아이템 포함</p><div class="rank-build-layout"><section><h3>슬롯 스탯</h3><table class="symbol-table"><caption>기본 → 적용</caption><thead><tr><th>심벌</th><th>1칸 점수</th><th>3개 배당</th><th>추첨 확률</th></tr></thead><tbody>${s.build.symbols.map(row=>`<tr><th scope="row">${icon(row.id)}<span class="sr-only">${esc(catalog.symbols.find(symbol=>symbol.id===row.id)?.name ?? row.id)}</span></th><td title="${exactScore(row.point)}">${statChange(row.basePoint,row.point)}</td><td title="${exactScore(row.linePayout)}">${statChange(row.baseLinePayout,row.linePayout)}</td><td title="가중치 ${row.weight} / ${s.build.totalWeight}">${statChange(row.baseProbability,row.probability,true)}<small class="rank-weight">가중치 ${row.weight}</small></td></tr>`).join('')}</tbody></table><dl><div><dt>라운드 Hand</dt><dd>${s.build.hands}</dd></div><div><dt>연속 당첨</dt><dd>${s.consecutiveWinHands}</dd></div></dl>${(s.build.milestoneRewards ?? [s.build.milestoneReward].filter(Boolean)).map(r=>`<div class="rank-blessing"><strong>${esc(r.name)}</strong><p>${esc(r.summary)}</p></div>`).join('')}${groups.map(([group,label,limit])=>{
       const items=s.items.filter(i=>i.group===group), count=group==='limited' ? items.reduce((sum,i)=>sum+i.stacks,0) : items.length;
-      return `<div class="rank-item-group"><h3>${label}<small>${limit===null ? `${count}종 · 무제한` : `${count}/${limit}`}</small></h3>${items.length ? items.map(i=>`<details class="rank-item"><summary><span>${esc(i.name)}${i.stacks>1 ? ` ×${i.stacks}` : ''}</span><small>${i.instances.some(x=>x.consumed) ? '마지막 스핀 소모' : i.instances.some(x=>x.triggered) ? '발동' : ''}</small></summary><p>${esc(i.description)}</p>${i.instances.map(x=>`<small>${x.remainingCharges!==undefined ? `발동 ${x.remainingCharges}회 남음` : x.remainingSpins!==undefined ? `${x.remainingSpins} Hand 남음` : x.active ? '적용 중' : '활성 전'}${x.consumed ? ' → 소모' : ''}</small>`).join('')}</details>`).join('') : '<p class="empty-label">없음</p>'}</div>`;
-    }).join('')}</section><section class="rank-last-spin"><h3>마지막 스핀</h3><div class="mini-grid" role="img" aria-label="${esc(s.lastSpin.board.map(id=>catalog.symbols.find(symbol=>symbol.id===id)?.name ?? id).join(', '))}">${s.lastSpin.board.map((symbol,i)=>`<div>${icon(symbol)}${s.lastSpin.wildMarks.includes(i) ? '<span class="wild-label">WILD</span>' : ''}</div>`).join('')}</div><dl><div><dt>심벌 점수</dt><dd>${score(s.lastSpin.baseScore)}</dd></div><div><dt>라인 배당 · ${s.lastSpin.winningLines}라인</dt><dd>${score(s.lastSpin.lineScore)}</dd></div><div><dt>패턴 / 가상 배당</dt><dd>${score(s.lastSpin.patternScore)} / ${score(s.lastSpin.virtualScore)}</dd></div><div><dt>적용 배수</dt><dd>${esc(s.lastSpin.multiplier)}</dd></div><div><dt>스핀 점수</dt><dd>${score(s.lastSpin.spinScore)}</dd></div></dl></section></div>`,true);
+      return `<div class="rank-item-group"><h3>${label}<small>${limit===null ? (group==='slotless' ? '점유 0' : `${count}종 · 무제한`) : `${count}/${limit}`}</small></h3>${items.length ? items.map(i=>`<details class="rank-item"><summary><span>${esc(i.name)}${i.stacks>1 ? ` ×${i.stacks}` : ''}</span><small>${i.instances.some(x=>x.consumed) ? '마지막 스핀 소모' : i.instances.some(x=>x.triggered) ? '발동' : ''}</small></summary><p>${esc(i.description)}</p>${i.instances.map(x=>`<small>${x.remainingCharges!==undefined ? `발동 ${x.remainingCharges}회 남음` : x.remainingSpins!==undefined ? `${x.remainingSpins} Hand 남음` : x.active ? '적용 중' : '활성 전'}${x.consumed ? ' → 소모' : ''}</small>`).join('')}</details>`).join('') : '<p class="empty-label">없음</p>'}</div>`;
+    }).join('')}</section><section class="rank-last-spin"><h3>마지막 스핀</h3><div class="mini-grid" role="img" aria-label="${esc(s.lastSpin.board.map(id=>catalog.symbols.find(symbol=>symbol.id===id)?.name ?? id).join(', '))}">${s.lastSpin.board.map((symbol,i)=>`<div>${icon(symbol)}${s.lastSpin.wildMarks.includes(i) ? '<span class="wild-label">WILD</span>' : ''}</div>`).join('')}</div><dl><div><dt>심벌 점수</dt><dd>${score(s.lastSpin.baseScore)}</dd></div><div><dt>라인 배당 · ${s.lastSpin.winningLines}라인</dt><dd>${score(s.lastSpin.lineScore)}</dd></div><div><dt>패턴 / 가상 배당</dt><dd>${score(s.lastSpin.patternScore)} / ${score(s.lastSpin.virtualScore)}</dd></div><div><dt>록 바텀</dt><dd>${score(s.lastSpin.specialFlatBonus ?? '0')}</dd></div><div><dt>적용 배수</dt><dd>${esc(s.lastSpin.multiplier)}</dd></div><div><dt>스핀 점수</dt><dd>${score(s.lastSpin.spinScore)}</dd></div></dl></section></div>`,true);
   } catch { if(request===rankRequest && $('#details').open) details('<h2>기록 상세</h2><p>기록을 불러오지 못했어요. 랭킹을 새로고침해 주세요.</p>'); }
 }
 function showItem(id, owned = false) {
   const item = itemOf(id); if (!item) return;
   const instances = owned ? run.items.filter((instance) => instance.itemId === id) : [];
-  details(`<div class="detail-icon ${item.rarity}">${icon(itemIcon(item))}</div><h2>${esc(item.nameKo)}</h2><p>${esc(item.description)}</p><p class="muted">${rarity[item.rarity]} · ${stackLabel(item)} · ${lifetime(item)}${item.minShopRound ? ` · R${item.minShopRound} 상점부터` : ''}</p>${instances.map((instance) => `<div class="owned-instance"><span>${lifetime(item, instance)}${instanceStatus(item, instance) ? ` · ${instanceStatus(item, instance)}` : ''}</span>${run.phase === 'SHOP' ? button('폐기', 'discard', { value: instance.instanceId, disabled: blocked(), className: 'danger-button' }) : ''}</div>`).join('')}`);
+  details(`<div class="detail-icon ${item.rarity}">${icon(itemIcon(item))}</div><h2>${esc(item.nameKo)}</h2><p>${esc(item.description)}</p><p class="muted">${rarity[item.rarity]} · ${stackLabel(item)} · ${lifetime(item)}${item.minShopRound ? ` · R${item.minShopRound} 상점부터` : ''}</p>${instances.map((instance) => `<div class="owned-instance"><span>${lifetime(item, instance)}${instanceStatus(item, instance) ? ` · ${instanceStatus(item, instance)}` : ''}</span>${run.phase === 'SHOP' && item.effect.discardable !== false ? button('폐기', 'discard', { value: instance.instanceId, disabled: blocked(), className: 'danger-button' }) : ''}</div>`).join('')}`);
 }
 function showSymbol(id) {
   const row = selectedBuild().symbols.find((symbol) => symbol.id === id);
@@ -181,7 +187,7 @@ function renderBoard() {
   const board = motion?.board ?? shownBoard ?? lastSpin?.board;
   const rolling = ['rolling', 'stopping'].includes(motion?.stage);
   const raw = rolling || motion?.stage === 'raw';
-  const removed = run?.milestoneReward?.removedSymbol;
+  const removed = (run?.milestoneRewards ?? [run?.milestoneReward]).find(r=>r?.removedSymbol)?.removedSymbol;
   const preview = ['cherry', 'bell', 'lemon', 'diamond', 'seven', 'cherry', 'lemon', 'diamond', 'bell']
     .map((id) => id === removed ? catalog.symbols.find((symbol) => symbol.id !== removed).id : id);
   const spotlight = motion?.stage === 'award';
@@ -308,7 +314,7 @@ async function action(suffix, extra = {}, isNew = false) {
       notice(`${lastEvent.reward.name} · ${lastEvent.reward.summary}`, false, true);
       await delay(preferences.fast ? 1000 : 1800); cardReveal = null;
     }
-    if (lastEvent?.type === 'ITEM_PURCHASED') notice(`${itemOf(lastEvent.itemId)?.nameKo} 구매 · ${lastEvent.refundCoins ? `+${lastEvent.refundCoins}코인 환급` : itemOf(lastEvent.itemId)?.effect.kind === 'shop_item_cost_subtract' ? '즉시 적용' : '다음 라운드 반영'}`, false, !lastEvent.refundCoins);
+    if (lastEvent?.type === 'ITEM_PURCHASED') notice(`${itemOf(lastEvent.itemId)?.nameKo} 구매 · ${lastEvent.refundCoins ? `+${lastEvent.refundCoins}코인 환급` : ['shop_item_cost_subtract','expand_inventory_capacity','choose_one_remaining_destiny_card'].includes(itemOf(lastEvent.itemId)?.effect.kind) ? '즉시 적용' : '다음 라운드 반영'}`, false, !lastEvent.refundCoins);
     await collectLegacyRun();
     if (spinning && !result.event.settlement && lastEvent?.type === 'ROUND_CLAIMED') {
       motion = { stage: 'clear', score: run.roundScore, hands: run.handsRemaining, reward: lastEvent.settlement.reward, board: lastSpin.board };
@@ -356,7 +362,12 @@ document.addEventListener('click', async (event) => {
   if (name === 'start-endless') { $('#victory').close(); await action('endless/start'); }
   if (name === 'choose-card') await action('cards/choice', { slotId:value });
   if (name === 'continue') await action('shop/continue');
-  if (name === 'buy') await action('shop/purchases', { slotId: value });
+  if (name === 'buy') {
+    const offer = run.shop.slots.find(o=>o.slotId===value);
+    if (offer?.destinyChoices) details(`<h2>에밀의 상점</h2><p>카드를 선택하면 ${offer.price}코인을 사용합니다.</p><div class="history-list">${offer.destinyChoices.map(c=>button(`<span>${esc(c.name)}</span><small>${esc(c.summary)}</small>`,'buy-destiny',{value:JSON.stringify({slotId:value,selectedDestinyCardId:c.cardId}),disabled:blocked()})).join('')}</div><p class="muted">닫으면 구매를 취소합니다.</p>`);
+    else await action('shop/purchases', { slotId:value });
+  }
+  if (name === 'buy-destiny') { $('#details').close(); await action('shop/destiny',JSON.parse(value)); }
   if (name === 'reroll') await action('shop/rerolls');
   if (name === 'start') { $('#details').close(); await action('', {}, true); }
   if (name === 'new') {

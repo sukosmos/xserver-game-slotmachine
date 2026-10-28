@@ -1,5 +1,6 @@
 import { exactInteger } from './exact.js';
 import { GameError, requireCondition } from './errors.js';
+import { expansionContracts } from './expansion-contract.js';
 import { selected8Contracts } from './selected8-contract.js';
 
 export const MAX_RANDOM_BOUND = 2 ** 32;
@@ -54,6 +55,7 @@ export function deepFreeze(value) {
 
 // Catalog validation is deliberately separate from effect execution (Phase 2+).
 const effectSpecs = {
+  ...Object.fromEntries(Object.entries(expansionContracts).map(([kind,spec])=>[kind,[spec.category,Object.keys(spec.fields)]])),
   weight_add: ['weight', ['symbol', 'amount'], ['basePointAdd']],
   symbol_line_add_factor: ['payout', ['symbol', 'extraFactor'], ['basePointAdd']],
   random_candidate_edit: ['board', ['triggerChanceBasisPoints', 'candidateSelection', 'boardPriority'], ['selectedLineMultiplier']],
@@ -79,7 +81,7 @@ const effectSpecs = {
 };
 
 function validateItem(item, path) {
-  keys(item, ['id', 'nameKo', 'rarity', 'price', 'category', 'slot', 'maxStacks', 'effect'], ['initialCharges', 'durationSpins', 'minShopRound'], path);
+  keys(item, ['id', 'nameKo', 'rarity', 'price', 'category', 'slot', 'maxStacks', 'effect'], ['initialCharges', 'durationSpins', 'minShopRound', 'uniquePerRun'], path);
   if (Object.hasOwn(item, 'minShopRound')) integer(item.minShopRound, `${path}.minShopRound`, 1);
   id(item.id, `${path}.id`);
   text(item.nameKo, `${path}.nameKo`);
@@ -87,7 +89,7 @@ function validateItem(item, path) {
   integer(item.price, `${path}.price`, 1);
   if (item.maxStacks === null) literal(item.slot, 'permanent', `${path}.slot`);
   else integer(item.maxStacks, `${path}.maxStacks`, 1);
-  oneOf(item.slot, ['permanent', 'charged', 'timed'], `${path}.slot`);
+  oneOf(item.slot, ['permanent', 'charged', 'timed', 'round', 'none'], `${path}.slot`);
   if (item.slot === 'charged') integer(item.initialCharges, `${path}.initialCharges`, 1);
   else check(!Object.hasOwn(item, 'initialCharges'), path, 'initialCharges only allowed on charged items');
   if (item.slot === 'timed') integer(item.durationSpins, `${path}.durationSpins`, 1);
@@ -118,6 +120,22 @@ function validateItem(item, path) {
     literal(effect.chargeOn, 'round_cleared', `${path}.effect.chargeOn`);
     fraction(effect.minimumTargetRatio, `${path}.effect.minimumTargetRatio`);
     check(exactInteger(effect.minimumTargetRatio.num) > 0n && exactInteger(effect.minimumTargetRatio.num) < exactInteger(effect.minimumTargetRatio.den), path, 'threshold must be between zero and one');
+  }
+  const expansion = expansionContracts[effect.kind];
+  if (expansion) {
+    literal(item.slot, expansion.slot, `${path}.slot`);
+    literal(item.maxStacks, 1, `${path}.maxStacks`);
+    literal(item.uniquePerRun, item.slot !== 'round', `${path}.uniquePerRun`);
+    for (const [key, expected] of Object.entries(expansion.fields)) {
+      if (typeof expected === 'number') integer(effect[key], `${path}.effect.${key}`, expected === 0 ? 0 : 1, key === 'procChanceBasisPoints' || key === 'maxChanceBasisPoints' ? 10000 : Number.MAX_SAFE_INTEGER);
+      else check(JSON.stringify(effect[key]) === JSON.stringify(expected), `${path}.effect.${key}`, 'unsupported policy');
+    }
+    // This engine implements these exact lifecycle and probability policies.
+    for (const key of ['occupiesSlots','grantPrice','durationRounds','procChanceBasisPoints','relativeIncreaseNumerator','relativeIncreaseDenominator','maxChanceBasisPoints','maxPhysicalEditsPerHand','scoreMultiplierNumerator','scoreMultiplierDenominator']) {
+      if (key in expansion.fields) literal(effect[key], expansion.fields[key], `${path}.effect.${key}`);
+    }
+  } else {
+    check(!['none','round'].includes(item.slot) && item.uniquePerRun === undefined, path, 'expansion lifecycle requires an expansion effect');
   }
   const selected = selected8Contracts[effect.kind];
   if (selected) {
@@ -225,7 +243,8 @@ export function parseRules(input) {
     bestCandidateTieBreak: 'line_definition_order', bestCandidateVirtualRolls: 'shared_lazy_per_spin',
     consecutiveWinsCarryAcrossRounds: true,
   };
-  keys(balance.itemRules, [...Object.keys(itemFlags), 'boardModifierPriority'], ['selected8Items','consumableActivation'], 'balance.itemRules');
+  keys(balance.itemRules, [...Object.keys(itemFlags), 'boardModifierPriority'], ['selected8Items','consumableActivation','expansion8Items'], 'balance.itemRules');
+  if (balance.itemRules.expansion8Items !== undefined) check(typeof balance.itemRules.expansion8Items === 'boolean', 'balance.itemRules.expansion8Items', 'expected boolean');
   if (balance.itemRules.consumableActivation !== undefined) literal(balance.itemRules.consumableActivation, 'once_per_round_remaining_hands', 'balance.itemRules.consumableActivation');
   if (Object.hasOwn(balance.itemRules, 'selected8Items')) check(typeof balance.itemRules.selected8Items === 'boolean', 'balance.itemRules.selected8Items', 'expected boolean');
   for (const [key, value] of Object.entries(itemFlags)) literal(balance.itemRules[key], value, `balance.itemRules.${key}`);

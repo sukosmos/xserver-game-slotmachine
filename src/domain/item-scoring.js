@@ -1,3 +1,4 @@
+import { hasExpansion } from './expansion-contract.js';
 import { getItem } from './rules.js';
 import { createWeightedTable, evaluateLines, validateBoard } from './slot.js';
 import { rational, addRational, multiplyRational, floorMultiply, exactInteger } from './exact.js';
@@ -28,6 +29,12 @@ export function symbolScores(rules, items) {
       if (effect.kind === 'conditional_per_line_factor') specialFactor = multiplyRational(specialFactor, fraction(symbol.id === 'seven' ? effect.forSeven : effect.forOther));
       if (effect.kind === 'zero_base_plus_per_real_line_factor') specialFactor = multiplyRational(specialFactor, fraction(effect.perRealLineFactor));
     }
+    for (const effect of effects) {
+      if (effect.kind === 'multiply_symbol_base_and_line_score' && effect.symbols.includes(symbol.id)) {
+        point *= BigInt(effect.baseScoreMultiplier);
+        specialFactor = multiplyRational(specialFactor, rational(effect.linePayoutMultiplier));
+      }
+    }
     const lineFactor = multiplyRational(symbolFactor, specialFactor);
     return { id: symbol.id, point: effects.some((effect) => effect.kind === 'zero_base_plus_per_real_line_factor') ? 0n : point,
       lineFactor, linePayout: floorMultiply(symbol.linePayout, lineFactor) };
@@ -35,7 +42,7 @@ export function symbolScores(rules, items) {
 }
 
 /** No RNG or mutation. Preview and final scoring use this same exact path. */
-export function scoreWithItems(board, rules, items, { consecutiveWinHands = 0, virtualScore = 0n, lineBonus = null, wildMarks = [], physicalChanged = false, spinFactor = null } = {}) {
+export function scoreWithItems(board, rules, items, { consecutiveWinHands = 0, virtualScore = 0n, lineBonus = null, wildMarks = [], physicalChanged = false, spinFactor = null, doublesArmed = false } = {}) {
   validateBoard(board, rules);
   requireCondition(Number.isSafeInteger(consecutiveWinHands) && consecutiveWinHands >= 0 && consecutiveWinHands < Number.MAX_SAFE_INTEGER, 'INVALID_WIN_STREAK');
   virtualScore = exactInteger(virtualScore);
@@ -88,10 +95,14 @@ export function scoreWithItems(board, rules, items, { consecutiveWinHands = 0, v
     }
   }
   const patternScore = winningPatterns.reduce((sum, pattern) => sum + pattern.score, 0n);
+  const specialFlatBonus = effects.filter(e=>e.kind === 'bonus_per_physical_symbol_base_value').reduce((sum,e)=>
+    sum + BigInt(board.filter(s=>s===e.symbol).length) * rules.symbolsById[e.symbol].basePoint * BigInt(e.bonusMultiplier),0n);
+  const doublesApplied = doublesArmed && effects.some(e=>e.kind === 'double_next_actual_hand_after_no_line');
   return {
+    ...(hasExpansion(rules) ? { specialFlatBonus, doublesApplied } : {}),
     rawBaseScore, baseScore, lineScore, virtualScore, globalMultiplier, winningLines,
     // Old snapshots must replay with the exact original audit event shape.
     ...(rules.lineDefinitions.squares !== undefined ? { patternScore, winningPatterns } : {}),
-    spinScore: floorMultiply(baseScore + lineScore + virtualScore + patternScore, globalMultiplier), consecutiveWinHands: nextStreak,
+    spinScore: floorMultiply(baseScore + lineScore + virtualScore + patternScore + specialFlatBonus, globalMultiplier) * (doublesApplied ? 2n : 1n), consecutiveWinHands: nextStreak,
   };
 }

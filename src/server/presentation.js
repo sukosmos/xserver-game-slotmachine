@@ -15,6 +15,7 @@ export function spinPresentation(event, rules) {
       convert_random_nonseven_to_seven: '세븐 +1칸', best_candidate_edit: '최고 득점 완성',
       random_candidate_edit: e.selectedLineMultiplier ? `라인 완성 · ×${decimalRatio(e.selectedLineMultiplier)}` : '라인 완성',
       virtual_cherry_line_bonus: `+${trigger.bonus ?? 0}점`,
+      complete_one_random_two_match_line: '라인 1칸 완성',
       copy_physical_column: '오른쪽 열 복사', place_random_temporary_wild_mark: '임시 WILD +1칸',
     };
     add(trigger.itemId, labels[e.kind], e.kind === 'virtual_cherry_line_bonus' ? 'score' : 'board');
@@ -23,6 +24,12 @@ export function spinPresentation(event, rules) {
   for (const active of event.activeEffects) counts.set(active.itemId, (counts.get(active.itemId) ?? 0) + 1);
   for (const [itemId, stacks] of counts) {
     const e = getItem(rules, itemId).effect;
+    if (e.kind === 'bonus_per_physical_symbol_base_value' && BigInt(event.specialFlatBonus ?? '0') > 0n) add(itemId, `+${event.specialFlatBonus}점`);
+    if (e.kind === 'double_next_actual_hand_after_no_line') {
+      if (event.doublesApplied) add(itemId, '×2');
+      if (event.doublesArmedForNextHand && event.outcome !== 'RUN_FAILED') add(itemId, 'NEXT ×2', 'next');
+    }
+    if (e.kind === 'multiply_symbol_base_and_line_score') add(itemId, '체리·레몬 점수/배당 ×3');
     if (e.kind === 'weight_add') add(itemId, `가중치 +${BigInt(e.amount) * BigInt(stacks)}${e.basePointAdd ? ` · 1칸 +${BigInt(e.basePointAdd) * BigInt(stacks)}점` : ''}`, 'draw');
     if (e.kind === 'square_match_bonus') {
       const squares = (event.winningPatterns ?? []).filter((p) => !p.kind || p.kind === 'square');
@@ -62,7 +69,7 @@ export function spinPresentation(event, rules) {
     ...(event.winningPatterns ?? []).map((pattern) => ({ kind: pattern.kind ?? 'square', id: pattern.patternId,
       label: pattern.kind === 'corners' ? '모서리' : pattern.kind === 'crossing' ? '교차' : '2×2', indices: pattern.indices, symbol: pattern.symbol, score: String(pattern.score) })),
   ];
-  return { multiplier: `×${decimalRatio(event.globalMultiplier)}`, effects, awards,
+  return { multiplier: `×${decimalRatio(event.globalMultiplier)}${event.doublesApplied ? ' · 더블 ×2' : ''}`, effects, awards,
     ...(event.emergency ? { emergency: { name: getItem(rules, event.emergency.itemId).nameKo, ...(event.emergency.type === 'EMERGENCY_ROUND_CLEARED' ? {label:'ROUND SAVED',roundCleared:true} : {handsGranted:event.emergency.handsGranted}) } } : {}),
     expired: event.expiredItems.map((item) => ({ itemId: item.itemId, name: getItem(rules, item.itemId).nameKo })) };
 }

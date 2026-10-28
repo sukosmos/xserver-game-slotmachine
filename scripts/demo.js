@@ -12,9 +12,10 @@ while (true) {
   const state = session.getState(userId);
   if (['RUN_WON', 'RUN_FAILED'].includes(state.phase)) break;
   let action = { type: state.phase === 'SHOP' ? 'CONTINUE' : state.canClaim ? 'CLAIM' : 'SPIN' };
+  if (state.phase === 'CARD_CHOICE') action = {type:'CHOOSE_CARD',slotId:state.cardChoice.slots[0].slotId};
   if (shopDemo && state.phase === 'SHOP') {
     const slot = state.shop.slots.find((offer) => offer.canBuy);
-    if (slot) action = { type: 'BUY', slotId: slot.slotId };
+    if (slot) action = slot.destinyChoices ? {type:'BUY_DESTINY',slotId:slot.slotId,selectedDestinyCardId:slot.destinyChoices[0].cardId} : {type:'BUY',slotId:slot.slotId};
     else if (state.shop.canReroll && state.shop.paidRerolls === 0) action = { type: 'REROLL' };
   }
   console.log(JSON.stringify(session.execute(userId, { ...action, expectedRevision: state.revision, idempotencyKey: `demo-${state.revision}` })));
