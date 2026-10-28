@@ -20,7 +20,7 @@ test('rock bottom awards upgraded diamond points once for one, two or nine diamo
     const s = state(...Array(stacks).fill('gem_appraiser'));
     for (const count of [0, 1, 2, 9]) {
       const result = scoreWithItems(board(count), rules, s.items);
-      assert.equal(result.specialFlatBonus, count ? BigInt(5 + 10 * stacks) * 100n : 0n);
+      assert.equal(result.specialFlatBonus, count ? BigInt(5 + 10 * stacks) * 50n : 0n);
       assert.equal(result.spinScore, result.baseScore + result.lineScore + result.specialFlatBonus);
     }
   }
@@ -32,9 +32,9 @@ test('card upgrades affect rock bottom, line multipliers do not, global factors 
   s.doublesArmedForNextHand = true;
   const b = ['diamond','cherry','lemon','bell','seven','cherry','lemon','bell','diamond'];
   const result = spinWithItems(rules, randomForBoard(b), s);
-  assert.equal(result.specialFlatBonus, 2500n);
+  assert.equal(result.specialFlatBonus, 1250n);
   assert.equal(result.spinScore, (result.baseScore + result.lineScore + result.specialFlatBonus) * 15n / 8n * 2n);
-  assert.equal(row(upgradeView(s, rules).current).presenceBonus, '2500');
+  assert.equal(row(upgradeView(s, rules).current).presenceBonus, '1250');
 });
 
 test('rock bottom follows the actual cell point including a zero-point contract', () => {
@@ -47,11 +47,11 @@ test('rock bottom follows the actual cell point including a zero-point contract'
 test('only physical diamonds qualify, including diamonds that are marked wild', () => {
   const s = state('gem_appraiser');
   assert.equal(scoreWithItems(board(0), rules, s.items, { wildMarks: [0] }).specialFlatBonus, 0n);
-  assert.equal(scoreWithItems(board(1), rules, s.items, { wildMarks: [0] }).specialFlatBonus, 1500n);
+  assert.equal(scoreWithItems(board(1), rules, s.items, { wildMarks: [0] }).specialFlatBonus, 750n);
   const changed = state('help_hand');
   const b = ['diamond','diamond','cherry','bell','lemon','seven','cherry','bell','lemon'];
   const result = spinWithItems(rules, randomForBoard(b, rules, [0]), changed);
-  assert.equal(result.board[2], 'diamond'); assert.equal(result.specialFlatBonus, 500n);
+  assert.equal(result.board[2], 'diamond'); assert.equal(result.specialFlatBonus, 250n);
 });
 
 test('presence bonus is separate from per-cell stats, previews activation, and disappears after discard', () => {
@@ -59,7 +59,7 @@ test('presence bonus is separate from per-cell stats, previews activation, and d
   s = { ...s, ...acquireItem(s, 'rock_bottom', rules, { activeFromRound: 2 }) };
   const view = upgradeView(s, rules);
   assert.equal(row(view.current).presenceBonus, undefined);
-  assert.equal(row(view.next).presenceBonus, '1500');
+  assert.equal(row(view.next).presenceBonus, '750');
   assert.equal(row(view.next).point, '15'); assert.equal(row(view.next).physicalPoint, undefined);
   assert.equal(row(view.next).linePayout, row(view.current).linePayout);
   s = { ...s, ...discardItem(s, s.items.at(-1).instanceId, rules) };
@@ -69,13 +69,15 @@ test('presence bonus is separate from per-cell stats, previews activation, and d
 test('large upgraded values retain exact arithmetic and decimal display', () => {
   const raw = rawRules(); raw.catalog.items.find(i => i.id === 'gem_appraiser').effect.basePointAdd = '9007199254740993';
   const config = parseRules(raw), s = createRun(config, { initialItemIds: ['rock_bottom','gem_appraiser'] });
-  const expected = (9007199254740993n + 5n) * 100n;
+  const expected = (9007199254740993n + 5n) * 50n;
   assert.equal(scoreWithItems(board(9), config, s.items).specialFlatBonus, expected);
   assert.equal(row(upgradeView(s, config).current).presenceBonus, String(expected));
 });
 
 test('old and new rock-bottom rules replay, repeat requests, and show their own descriptions and effects', () => {
-  for (const config of [rules, parseRules(rawLegacyRockRules())]) {
+  const prior = rawRules(); Object.assign(prior.catalog.items.find(i => i.id === 'rock_bottom'), { nameKo: '락바텀', price: 8 });
+  prior.catalog.items.find(i => i.id === 'rock_bottom').effect.bonusMultiplier = 100;
+  for (const config of [rules, parseRules(prior), parseRules(rawLegacyRockRules())]) {
     const session = new GameSession(config, { userId: 'test', seed, initialItemIds: ['rock_bottom','gem_appraiser'] });
     const command = { type: 'SPIN', expectedRevision: 0, idempotencyKey: 'rock-spin' };
     const result = session.execute('test', command);
@@ -85,6 +87,7 @@ test('old and new rock-bottom rules replay, repeat requests, and show their own 
     if (BigInt(event.specialFlatBonus) > 0n) assert.ok(spinPresentation(event, config).effects.some(e => e.itemId === 'rock_bottom' && e.label === `+${event.specialFlatBonus}점`));
   }
   const item = publicCatalog(rules).items.find(i => i.id === 'rock_bottom');
+  assert.equal(item.nameKo, '도굴꾼'); assert.equal(item.price, 7); assert.equal(item.effect.bonusMultiplier, 50);
   assert.match(item.description, /스핀당 한 번/); assert.match(item.description, /강화/);
   const raw = rawRules(); raw.catalog.items.find(i => i.id === 'rock_bottom').effect.maxAwardsPerSpin = 2;
   assert.throws(() => parseRules(raw), { code: 'INVALID_RULES' });

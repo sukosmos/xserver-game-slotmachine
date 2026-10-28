@@ -40,6 +40,14 @@ export function createShop(state, rules, rng, { offerSequence = 0, paidRerolls =
     const options = eligible.filter((item) => item.rarity === rarity);
     const selected = options[drawInt(rng, options.length, randomTrace, { purpose: 'shop_item', slotId })];
     pool = pool.filter((item) => item.id !== selected.id);
+    if (selected.effect.hiddenSelection) {
+      const cards = eligibleDestinyCards(state, rules).map(card => card.id);
+      for (let i = cards.length - 1; i > 0; i--) {
+        const j = drawInt(rng, i + 1, randomTrace, { purpose: 'shop_destiny_shuffle', slotId });
+        [cards[i], cards[j]] = [cards[j], cards[i]];
+      }
+      meta.destinyCards = cards.map((cardId, i) => ({ slotId: `${slotId}-card-${i}`, cardId }));
+    }
     return { slotId, itemId: selected.id, soldOut: false, ...meta };
   });
   return { shop: { slots, offerSequence, paidRerolls, freeRerollsUsed }, randomTrace };
@@ -69,7 +77,10 @@ function purchaseQuote(state, slot, rules) {
   if (item.uniquePerRun && state.purchasedUniqueItemIds?.includes(item.id)) return {price,canBuy:false,blockedReason:'ITEM_ALREADY_PURCHASED'};
   if (hasExpansion(rules) && state.roundIndex < (item.minShopRound ?? 1)) return {price,canBuy:false,blockedReason:'ITEM_NOT_AVAILABLE'};
   if (item.effect.kind === 'choose_one_remaining_destiny_card') {
-    const destinyChoices = eligibleDestinyCards(state,rules).map(c=>milestoneRewardView({milestoneReward:{cardId:c.id}},rules));
+    const eligible = eligibleDestinyCards(state, rules);
+    const destinyChoices = item.effect.hiddenSelection
+      ? (slot.destinyCards ?? []).filter(c => eligible.some(card => card.id === c.cardId)).map(({ slotId }) => ({ slotId }))
+      : eligible.map(c=>milestoneRewardView({milestoneReward:{cardId:c.id}},rules));
     const blockedReason = !destinyChoices.length ? 'NO_DESTINY_CHOICES' : state.coins < price ? 'INSUFFICIENT_COINS' : null;
     return {price,canBuy:blockedReason===null,blockedReason,destinyChoices};
   }
@@ -110,11 +121,11 @@ export function getShopView(state, rules) {
     offerSequence: state.shop.offerSequence, paidRerolls: state.shop.paidRerolls, freeRerollsUsed: state.shop.freeRerollsUsed,
     freeRerollsRemaining: reroll.freeRerollsRemaining, rerollPrice: reroll.price,
     canReroll: reroll.canReroll, rerollBlockedReason: reroll.blockedReason,
-    slots: state.shop.slots.map(({ slotId, itemId, soldOut, group }) => ({ slotId, itemId, soldOut, ...(group ? { group } : {}), ...purchaseQuote(state, { itemId, soldOut }, rules) })),
+    slots: state.shop.slots.map(slot => ({ slotId: slot.slotId, itemId: slot.itemId, soldOut: slot.soldOut, ...(slot.group ? { group: slot.group } : {}), ...purchaseQuote(state, slot, rules) })),
   };
 }
 
-export function buyItem(previous, slotId, rules, { selectedDestinyCardId, rng } = {}) {
+export function buyItem(previous, slotId, rules, { selectedDestinyCardId, selectedDestinySlotId, rng } = {}) {
   assertShop(previous);
   const slot = previous.shop.slots.find((entry) => entry.slotId === slotId);
   requireCondition(slot !== undefined, 'UNKNOWN_SHOP_SLOT');
@@ -122,8 +133,18 @@ export function buyItem(previous, slotId, rules, { selectedDestinyCardId, rng } 
   requireCondition(quote.canBuy, quote.blockedReason);
   const item = getItem(rules,slot.itemId);
   const emil = item.effect.kind === 'choose_one_remaining_destiny_card';
-  requireCondition(emil || selectedDestinyCardId === undefined, 'INVALID_DESTINY_CARD');
-  if (emil) requireCondition(typeof selectedDestinyCardId === 'string', 'DESTINY_SELECTION_REQUIRED');
+  requireCondition(emil || (selectedDestinyCardId === undefined && selectedDestinySlotId === undefined), 'INVALID_DESTINY_CARD');
+  let chosenCardId = selectedDestinyCardId;
+  if (emil && item.effect.hiddenSelection) {
+    requireCondition(selectedDestinyCardId === undefined, 'INVALID_DESTINY_CARD');
+    requireCondition(typeof selectedDestinySlotId === 'string', 'DESTINY_SELECTION_REQUIRED');
+    const chosen = slot.destinyCards.find(card => card.slotId === selectedDestinySlotId);
+    requireCondition(chosen, 'UNKNOWN_CARD_SLOT');
+    chosenCardId = chosen.cardId;
+  } else if (emil) {
+    requireCondition(selectedDestinySlotId === undefined, 'INVALID_DESTINY_CARD');
+    requireCondition(typeof selectedDestinyCardId === 'string', 'DESTINY_SELECTION_REQUIRED');
+  }
   const inventory = emil ? { items:previous.items.map(i=>({...i})), nextItemOrder:previous.nextItemOrder }
     : acquireItem(previous, slot.itemId, rules, { activeFromRound: previous.roundIndex + (item.slot === 'none' ? 0 : 1) });
   let coins = safeAmount(BigInt(previous.coins) - BigInt(quote.price));
@@ -139,7 +160,7 @@ export function buyItem(previous, slotId, rules, { selectedDestinyCardId, rng } 
       refunds.push({ type: 'RECEIPT_REFUNDED', instanceId: source.instanceId, itemId: source.itemId, coins: effect.refundCoins });
     }
   }
-  const granted = emil ? grantDestinyCard({...previous,...inventory,coins},selectedDestinyCardId,rules,rng) : null;
+  const granted = emil ? grantDestinyCard({...previous,...inventory,coins},chosenCardId,rules,rng) : null;
   return {
     ...(granted ? {randomTrace:granted.randomTrace} : {}),
     state: {

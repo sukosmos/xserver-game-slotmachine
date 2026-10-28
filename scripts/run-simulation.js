@@ -32,7 +32,7 @@ export function simulateRuns(rules, { trials = 10000, seed = 'nine-phase5-v1', s
           return Number(x.category === 'economy') - Number(y.category === 'economy') || a.price - b.price || a.itemId.localeCompare(b.itemId, 'en');
         });
         if (shopping && offers.length) action = offers[0].destinyChoices
-          ? { type:'BUY_DESTINY', slotId:offers[0].slotId, selectedDestinyCardId:offers[0].destinyChoices[0].cardId }
+          ? { type:'BUY_DESTINY', slotId:offers[0].slotId, ...(offers[0].destinyChoices[0].slotId ? {selectedDestinySlotId:offers[0].destinyChoices[0].slotId} : {selectedDestinyCardId:offers[0].destinyChoices[0].cardId}) }
           : { type:'BUY', slotId:offers[0].slotId };
         else if (shopping && shop.canReroll && (shop.freeRerollsRemaining > 0 || (shop.paidRerolls === 0 && state.coins >= shop.rerollPrice + Math.min(...rules.catalog.items.map((item) => item.price))))) action = { type: 'REROLL' };
         else action = { type: 'CONTINUE' };

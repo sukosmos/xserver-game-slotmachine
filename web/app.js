@@ -74,6 +74,16 @@ function renderCardScene() {
     return `<button class="fate-card ${selected ? 'revealed' : reward ? 'unchosen' : ''}" data-action="choose-card" data-value="${esc(slot.slotId)}" aria-label="${i + 1}번째 카드${selected ? ` · ${esc(reward.name)}` : ' 선택'}" ${blocked() || reward ? 'disabled' : ''}><span class="card-inner"><span class="card-back" aria-hidden="true"><span class="card-emblem">9</span><span class="card-stars">✦</span></span><span class="card-front" aria-hidden="true">${selected ? icon(reward.removedSymbol ?? (reward.cardId === 'wild' ? 'spark' : reward.cardId === 'windfall' ? 'coin' : 'crown')) : ''}</span></span></button>`;
   }).join('')}</div><div class="card-result" role="status">${reward ? `<strong>${esc(reward.name)}</strong><p>${esc(reward.summary)}</p>` : '<small>한 장의 보상을 받습니다</small>'}</div></section>`;
 }
+function showEmilChoice(offer, reveal = null) {
+  const reward = reveal?.reward;
+  const content = `<h2>에밀의 상점</h2><p class="card-prompt">${reward ? '당신의 카드' : `뒷면 카드 한 장을 고르세요 · ${offer.price}코인`}</p>
+    <div class="fate-cards ${offer.destinyChoices.length === 4 ? 'four-cards' : ''}">${offer.destinyChoices.map((card, i) => {
+      const selected = reveal?.slotId === card.slotId;
+      return `<button class="fate-card ${selected ? 'revealed' : reward ? 'unchosen' : ''}" data-action="buy-destiny" data-value="${esc(JSON.stringify({slotId:offer.slotId,selectedDestinySlotId:card.slotId}))}" aria-label="${i + 1}번째 카드${selected ? ` · ${esc(reward.name)}` : ' 선택'}" ${blocked() || reward ? 'disabled' : ''}><span class="card-inner"><span class="card-back" aria-hidden="true"><span class="card-emblem">9</span><span class="card-stars">✦</span></span><span class="card-front" aria-hidden="true">${selected ? icon(reward.removedSymbol ?? (reward.cardId === 'wild' ? 'spark' : reward.cardId === 'windfall' ? 'coin' : 'crown')) : ''}</span></span></button>`;
+    }).join('')}</div><div class="card-result" role="status">${reward ? `<strong>${esc(reward.name)}</strong><p>${esc(reward.summary)}</p>` : '<small>선택한 카드만 공개됩니다</small>'}</div>${reward ? '' : '<p class="muted">선택하기 전에 닫으면 구매를 취소합니다.</p>'}`;
+  if ($('#details').open) renderInto($('#detail-content'), content);
+  else details(content);
+}
 function renderBlessing() {
   return (run?.milestoneRewards ?? [run?.milestoneReward].filter(Boolean)).map(renderReward).join('');
 }
@@ -119,7 +129,7 @@ function renderBreakdown() {
   if (!lastSpin) return '';
   const triggered = presentation?.effects.map((effect) => `${effect.name} ${effect.label}`) ?? lastSpin.triggeredItems.map((t) => itemOf(t.itemId)?.nameKo).filter(Boolean);
   const expired = lastSpin.expiredItems.map((t) => itemOf(t.itemId)?.nameKo).filter(Boolean);
-  return `<details class="breakdown"><summary>점수 내역 <span>+${compactScore(lastSpin.spinScore)} ⌄</span></summary><dl><div><dt>심벌 점수</dt><dd>${exactScore(lastSpin.baseScore)}</dd></div><div><dt>라인 배당</dt><dd>${exactScore(lastSpin.lineScore)}</dd></div>${BigInt(lastSpin.patternScore ?? '0') > 0n ? `<div><dt>패턴 배당</dt><dd>${exactScore(lastSpin.patternScore)}</dd></div>` : ''}${BigInt(lastSpin.specialFlatBonus ?? '0') > 0n ? `<div><dt>록 바텀</dt><dd>${exactScore(lastSpin.specialFlatBonus)}</dd></div>` : ''}${lastSpin.virtualScore !== '0' ? `<div><dt>가상 배당</dt><dd>${exactScore(lastSpin.virtualScore)}</dd></div>` : ''}<div><dt>전체 배수</dt><dd>${esc(presentation?.multiplier ?? '—')}</dd></div><div><dt>최종 점수</dt><dd>${exactScore(lastSpin.spinScore)}</dd></div></dl>${triggered.length ? `<p>발동: ${esc(triggered.join(', '))}</p>` : ''}${expired.length ? `<p>만료: ${esc(expired.join(', '))}</p>` : ''}${button('보드 전후', 'before-after', { className: 'text-button' })}</details>`;
+  return `<details class="breakdown"><summary>점수 내역 <span>+${compactScore(lastSpin.spinScore)} ⌄</span></summary><dl><div><dt>심벌 점수</dt><dd>${exactScore(lastSpin.baseScore)}</dd></div><div><dt>라인 배당</dt><dd>${exactScore(lastSpin.lineScore)}</dd></div>${BigInt(lastSpin.patternScore ?? '0') > 0n ? `<div><dt>패턴 배당</dt><dd>${exactScore(lastSpin.patternScore)}</dd></div>` : ''}${BigInt(lastSpin.specialFlatBonus ?? '0') > 0n ? `<div><dt>다이아 추가점수</dt><dd>${exactScore(lastSpin.specialFlatBonus)}</dd></div>` : ''}${lastSpin.virtualScore !== '0' ? `<div><dt>가상 배당</dt><dd>${exactScore(lastSpin.virtualScore)}</dd></div>` : ''}<div><dt>전체 배수</dt><dd>${esc(presentation?.multiplier ?? '—')}</dd></div><div><dt>최종 점수</dt><dd>${exactScore(lastSpin.spinScore)}</dd></div></dl>${triggered.length ? `<p>발동: ${esc(triggered.join(', '))}</p>` : ''}${expired.length ? `<p>만료: ${esc(expired.join(', '))}</p>` : ''}${button('보드 전후', 'before-after', { className: 'text-button' })}</details>`;
 }
 function isActive(instance) {
   return instance.activeFromRound <= run.roundIndex || itemOf(instance.itemId).effect.kind === 'shop_item_cost_subtract';
@@ -178,7 +188,7 @@ async function showRank(id) {
     details(`<h2>${owner===playerId ? '내 기록' : `PLAYER ${esc(owner.slice(0,6).toUpperCase())}`}</h2><p class="rank-subtitle">R${s.roundIndex} · ${s.mode==='endless' ? 'ENDLESS · ' : ''}${s.outcome==='RUN_WON' ? '클리어' : '종료'} · ${esc(s.rulesVersion)}</p><div class="rank-summary"><div><small>완료 라운드</small><strong>${s.completedRounds}</strong></div><div><small>누적 점수</small><strong>${score(s.runTotalScore)}</strong></div><div><small>라운드 점수 / 목표</small><strong>${score(s.roundScore)} / ${score(s.targetScore)}</strong></div></div><p class="muted">마지막 스핀 기준 · 소모된 아이템 포함</p><div class="rank-build-layout"><section><h3>슬롯 스탯</h3><table class="symbol-table"><caption>기본 → 적용</caption><thead><tr><th>심벌</th><th>1칸 점수</th><th>3개 배당</th><th>추첨 확률</th></tr></thead><tbody>${s.build.symbols.map(row=>`<tr><th scope="row">${icon(row.id)}<span class="sr-only">${esc(catalog.symbols.find(symbol=>symbol.id===row.id)?.name ?? row.id)}</span></th><td title="${exactScore(row.physicalPoint ?? row.point)}">${symbolPointStat(row)}</td><td title="${exactScore(row.linePayout)}">${statChange(row.baseLinePayout,row.linePayout)}</td><td title="가중치 ${row.weight} / ${s.build.totalWeight}">${statChange(row.baseProbability,row.probability,true)}<small class="rank-weight">가중치 ${row.weight}</small></td></tr>`).join('')}</tbody></table><dl><div><dt>라운드 Hand</dt><dd>${s.build.hands}</dd></div><div><dt>연속 당첨</dt><dd>${s.consecutiveWinHands}</dd></div></dl>${(s.build.milestoneRewards ?? [s.build.milestoneReward].filter(Boolean)).map(r=>`<div class="rank-blessing"><strong>${esc(r.name)}</strong><p>${esc(r.summary)}</p></div>`).join('')}${groups.map(([group,label,limit])=>{
       const items=s.items.filter(i=>i.group===group), count=group==='limited' ? items.reduce((sum,i)=>sum+i.stacks,0) : items.length;
       return `<div class="rank-item-group"><h3>${label}<small>${limit===null ? (group==='slotless' ? '점유 0' : `${count}종 · 무제한`) : `${count}/${limit}`}</small></h3>${items.length ? items.map(i=>`<details class="rank-item"><summary><span>${esc(i.name)}${i.stacks>1 ? ` ×${i.stacks}` : ''}</span><small>${i.instances.some(x=>x.consumed) ? '마지막 스핀 소모' : i.instances.some(x=>x.triggered) ? '발동' : ''}</small></summary><p>${esc(i.description)}</p>${i.instances.map(x=>`<small>${x.remainingCharges!==undefined ? `발동 ${x.remainingCharges}회 남음` : x.remainingSpins!==undefined ? `${x.remainingSpins} Hand 남음` : x.active ? '적용 중' : '활성 전'}${x.consumed ? ' → 소모' : ''}</small>`).join('')}</details>`).join('') : '<p class="empty-label">없음</p>'}</div>`;
-    }).join('')}</section><section class="rank-last-spin"><h3>마지막 스핀</h3><div class="mini-grid" role="img" aria-label="${esc(s.lastSpin.board.map(id=>catalog.symbols.find(symbol=>symbol.id===id)?.name ?? id).join(', '))}">${s.lastSpin.board.map((symbol,i)=>`<div>${icon(symbol)}${s.lastSpin.wildMarks.includes(i) ? '<span class="wild-label">WILD</span>' : ''}</div>`).join('')}</div><dl><div><dt>심벌 점수</dt><dd>${score(s.lastSpin.baseScore)}</dd></div><div><dt>라인 배당 · ${s.lastSpin.winningLines}라인</dt><dd>${score(s.lastSpin.lineScore)}</dd></div><div><dt>패턴 / 가상 배당</dt><dd>${score(s.lastSpin.patternScore)} / ${score(s.lastSpin.virtualScore)}</dd></div><div><dt>록 바텀</dt><dd>${score(s.lastSpin.specialFlatBonus ?? '0')}</dd></div><div><dt>적용 배수</dt><dd>${esc(s.lastSpin.multiplier)}</dd></div><div><dt>스핀 점수</dt><dd>${score(s.lastSpin.spinScore)}</dd></div></dl></section></div>`,true);
+    }).join('')}</section><section class="rank-last-spin"><h3>마지막 스핀</h3><div class="mini-grid" role="img" aria-label="${esc(s.lastSpin.board.map(id=>catalog.symbols.find(symbol=>symbol.id===id)?.name ?? id).join(', '))}">${s.lastSpin.board.map((symbol,i)=>`<div>${icon(symbol)}${s.lastSpin.wildMarks.includes(i) ? '<span class="wild-label">WILD</span>' : ''}</div>`).join('')}</div><dl><div><dt>심벌 점수</dt><dd>${score(s.lastSpin.baseScore)}</dd></div><div><dt>라인 배당 · ${s.lastSpin.winningLines}라인</dt><dd>${score(s.lastSpin.lineScore)}</dd></div><div><dt>패턴 / 가상 배당</dt><dd>${score(s.lastSpin.patternScore)} / ${score(s.lastSpin.virtualScore)}</dd></div><div><dt>다이아 추가점수</dt><dd>${score(s.lastSpin.specialFlatBonus ?? '0')}</dd></div><div><dt>적용 배수</dt><dd>${esc(s.lastSpin.multiplier)}</dd></div><div><dt>스핀 점수</dt><dd>${score(s.lastSpin.spinScore)}</dd></div></dl></section></div>`,true);
   } catch { if(request===rankRequest && $('#details').open) details('<h2>기록 상세</h2><p>기록을 불러오지 못했어요. 랭킹을 새로고침해 주세요.</p>'); }
 }
 function showItem(id, owned = false) {
@@ -203,7 +213,7 @@ function showSymbol(id) {
     <p>${build === upgrades?.next ? `다음 R${build.roundIndex} 적용` : `R${build.roundIndex} 현재 적용`}</p>
     <dl><div><dt>1칸 점수</dt><dd>${exactScore(row.basePoint)} → ${exactScore(row.physicalPoint ?? row.point)}</dd></div>
     ${row.physicalBonus ? `<div><dt>점수 구성</dt><dd>심벌 ${exactScore(row.point)} + 추가 ${exactScore(row.physicalBonus)}</dd></div>` : ''}
-    ${row.presenceBonus !== undefined ? `<div><dt>록 바텀 추가점수</dt><dd>등장 시 +${exactScore(row.presenceBonus)}<br>개수와 무관하게 스핀당 1회</dd></div>` : ''}
+    ${row.presenceBonus !== undefined ? `<div><dt>${esc(itemOf('rock_bottom')?.nameKo ?? '도굴꾼')} 추가점수</dt><dd>등장 시 +${exactScore(row.presenceBonus)}<br>개수와 무관하게 스핀당 1회</dd></div>` : ''}
     <div><dt>3개 배당</dt><dd>${exactScore(row.baseLinePayout)} → ${exactScore(row.linePayout)}</dd></div>
     <div><dt>추첨 확률</dt><dd>${row.baseProbability} → ${row.probability}</dd></div></dl>
     <p>가중치 ${row.weight} / 전체 ${build.totalWeight}. 보드 조작 전 추첨 기준.</p>
@@ -279,11 +289,11 @@ function playSound() {
   if (!preferences.sound) return;
   try { audioContext ??= new AudioContext(); void audioContext.resume(); } catch {}
 }
-function beep(won) {
-  if (!preferences.sound || !audioContext) return;
+function beep() {
+  if (!preferences.sound || preferences.reduced || !audioContext) return;
   const oscillator = audioContext.createOscillator(), gain = audioContext.createGain();
-  oscillator.type = 'sine'; oscillator.frequency.value = won ? 660 : 330;
-  gain.gain.setValueAtTime(0.04, audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.18);
+  oscillator.type = 'sine'; oscillator.frequency.value = 660;
+  gain.gain.setValueAtTime(0.12, audioContext.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.18);
   oscillator.connect(gain).connect(audioContext.destination); oscillator.start(); oscillator.stop(audioContext.currentTime + 0.18);
 }
 function animateScore(from, to, duration) {
@@ -306,9 +316,12 @@ async function action(suffix, extra = {}, isNew = false) {
   if (blocked()) return;
   const previousPhase = run?.phase, previousSpin = lastSpin, previousPresentation = presentation;
   const choiceSlots = run?.cardChoice?.slots;
+  const hiddenOffer = suffix === 'shop/destiny' && extra.selectedDestinySlotId
+    ? run.shop.slots.find(offer => offer.slotId === extra.slotId) : null;
   let committed = null, applied = false;
   const spinning = suffix === 'spins';
   busy = true;
+  if (hiddenOffer) showEmilChoice(hiddenOffer);
   if (spinning) motion = { stage: 'rolling', score: run.roundScore, hands: run.handsRemaining, board: lastSpin?.board };
   notice(); playSound(); render();
   if (spinning) spinAudio.start(preferences);
@@ -325,13 +338,13 @@ async function action(suffix, extra = {}, isNew = false) {
         show(stage, data) {
           spinAudio.onStage(stage);
           Object.assign(motion, { stage, effects: [], award: null }, data); render();
-          if (stage === 'effects') { beep(true); notice(data.effects.map((effect) => `${effect.name} ${effect.label}`).join(' · '), false, true); }
+          if (stage === 'award' && data.award.kind === 'line') beep();
+          if (stage === 'effects') notice(data.effects.map((effect) => `${effect.name} ${effect.label}`).join(' · '), false, true);
           if (stage === 'clear') notice(`라운드 ${run.roundIndex} 클리어 · +${data.reward}코인`, false, true);
           if (stage === 'emergency') notice(data.roundCleared ? '비상 레버 사용 · 라운드 통과' : `비상 레버 · Hand +${data.handsGranted}`, false, true);
         },
         fill: (duration) => animateScore(run.roundScore, result.state.roundScore, duration),
       });
-      beep(lastSpin.winningLines.length > 0 || lastSpin.winningPatterns?.length > 0);
       if (!lastSpin.settlement) notice(`${awardSummary(lastSpin)} · +${exactScore(lastSpin.spinScore)}점`, false, true);
     }
     run = result.state; upgrades = result.upgrades; upgradeMode = null; lastEvent = result.event ?? null;
@@ -345,7 +358,17 @@ async function action(suffix, extra = {}, isNew = false) {
       notice(`${lastEvent.reward.name} · ${lastEvent.reward.summary}`, false, true);
       await delay(preferences.fast ? 1000 : 1800); cardReveal = null;
     }
-    if (lastEvent?.type === 'ITEM_PURCHASED') notice(`${itemOf(lastEvent.itemId)?.nameKo} 구매 · ${lastEvent.refundCoins ? `+${lastEvent.refundCoins}코인 환급` : ['shop_item_cost_subtract','expand_inventory_capacity','choose_one_remaining_destiny_card'].includes(itemOf(lastEvent.itemId)?.effect.kind) ? '즉시 적용' : '다음 라운드 반영'}`, false, !lastEvent.refundCoins);
+    if (lastEvent?.type === 'ITEM_PURCHASED') {
+      if (hiddenOffer && lastEvent.destinyReward) {
+        const reward = run.milestoneRewards.find(card => card.cardId === lastEvent.destinyReward.cardId);
+        notice(`${reward.name} · ${reward.summary}`, false, true);
+        if ($('#details').open) {
+          showEmilChoice(hiddenOffer, { slotId: extra.selectedDestinySlotId, reward });
+          await delay(preferences.fast ? 1000 : 1800);
+          $('#details').close();
+        }
+      } else notice(`${itemOf(lastEvent.itemId)?.nameKo} 구매 · ${lastEvent.refundCoins ? `+${lastEvent.refundCoins}코인 환급` : ['shop_item_cost_subtract','expand_inventory_capacity','choose_one_remaining_destiny_card'].includes(itemOf(lastEvent.itemId)?.effect.kind) ? '즉시 적용' : '다음 라운드 반영'}`, false, !lastEvent.refundCoins);
+    }
     await collectLegacyRun();
     if (spinning && !result.event.settlement && lastEvent?.type === 'ROUND_CLAIMED') {
       motion = { stage: 'clear', score: run.roundScore, hands: run.handsRemaining, reward: lastEvent.settlement.reward, board: lastSpin.board };
@@ -364,6 +387,10 @@ async function action(suffix, extra = {}, isNew = false) {
   } finally {
     spinAudio.stop();
     busy = false; shownBoard = null; motion = null; cardReveal = null; render();
+    if (hiddenOffer && !applied && $('#details').open) {
+      const current = run?.shop?.slots.find(offer => offer.slotId === hiddenOffer.slotId && offer.canBuy);
+      if (current) showEmilChoice(current); else $('#details').close();
+    }
     if (run?.phase !== previousPhase && !document.querySelector('dialog[open]')) $('#scene')?.focus({ preventScroll: true });
   }
 }
@@ -397,10 +424,15 @@ document.addEventListener('click', async (event) => {
   if (name === 'continue') await action('shop/continue');
   if (name === 'buy') {
     const offer = run.shop.slots.find(o=>o.slotId===value);
+    if (offer?.destinyChoices?.[0]?.slotId) { showEmilChoice(offer); return; }
     if (offer?.destinyChoices) details(`<h2>에밀의 상점</h2><p>카드를 선택하면 ${offer.price}코인을 사용합니다.</p><div class="history-list">${offer.destinyChoices.map(c=>button(`<span>${esc(c.name)}</span><small>${esc(c.summary)}</small>`,'buy-destiny',{value:JSON.stringify({slotId:value,selectedDestinyCardId:c.cardId}),disabled:blocked()})).join('')}</div><p class="muted">닫으면 구매를 취소합니다.</p>`);
     else await action('shop/purchases', { slotId:value });
   }
-  if (name === 'buy-destiny') { $('#details').close(); await action('shop/destiny',JSON.parse(value)); }
+  if (name === 'buy-destiny') {
+    const choice = JSON.parse(value);
+    if (!choice.selectedDestinySlotId) $('#details').close();
+    await action('shop/destiny', choice);
+  }
   if (name === 'reroll') await action('shop/rerolls');
   if (name === 'start') { $('#details').close(); await action('', {}, true); }
   if (name === 'new') {

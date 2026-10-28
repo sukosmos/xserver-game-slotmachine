@@ -332,7 +332,8 @@ test('Emil and bag purchases survive SQLite restart, retries and rank snapshot c
    if(round===1){act('BUY',{slotId:state.shop.slots.find(o=>o.itemId==='survival_bag').slotId});assert.deepEqual(state.inventoryLimits,{permanent:6,limited:3});}
    if(round<5)act('CONTINUE');
  }
- const offer=state.shop.slots.find(o=>o.itemId==='emils_shop');const command=cmd('BUY_DESTINY',state.revision,{slotId:offer.slotId,selectedDestinyCardId:offer.destinyChoices[0].cardId});
+ const offer=state.shop.slots.find(o=>o.itemId==='emils_shop');const command=cmd('BUY_DESTINY',state.revision,{slotId:offer.slotId,selectedDestinySlotId:offer.destinyChoices[0].slotId});
+ active.close();active=open();assert.deepEqual(active.getRun('alice',runId).state,state);
  const bought=active.execute('alice',runId,command);state=bought.state;active.close();active=open();
  assert.deepEqual(active.getRun('alice',runId).state,state);assert.deepEqual(active.execute('alice',runId,command),bought);
  assert.equal(state.milestoneRewards.length,2);assert.deepEqual(state.inventoryLimits,{permanent:6,limited:3});

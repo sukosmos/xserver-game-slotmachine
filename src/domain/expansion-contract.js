@@ -41,6 +41,7 @@ export const expansionContracts = {
   "choose_one_remaining_destiny_card": {
     "category": "destiny",
     "slot": "none",
+    "optionalFields": { "hiddenSelection": true },
     "fields": {
       "trigger": "shop_purchase_selection_commit",
       "selectionSource": "eligible_unclaimed_destiny_cards",

@@ -25,8 +25,8 @@ test('v0.15 appends exactly eight items and preserves existing effects alongside
  prior.catalog.items.find(i=>i.id==='compound_magic').price=3;
  prior.catalog.items.find(i=>i.id==='haggler').price=7;
  assert.deepEqual(rules.catalog.items.slice(0,37),prior.catalog.items);
- const tuned={hootie_fruitie:{price:10,rarity:'legendary'},midas_hand:{price:6,rarity:'epic'}};
- for(const i of source.items){const actual=rules.itemsById[i.id];assert.equal(actual.price,tuned[i.id]?.price??i.price);assert.equal(actual.rarity,tuned[i.id]?.rarity??i.rarity);if(i.id==='rock_bottom'){assert.equal(actual.effect.kind,'bonus_once_if_physical_symbol_present');assert.equal(actual.effect.bonusMultiplier,100);assert.equal(actual.effect.maxAwardsPerSpin,1);}else assert.deepEqual(actual.effect,i.id==='help_hand'?{...i.effect,protectCompletedLines:true}:i.effect);}
+ const tuned={rock_bottom:{price:7,rarity:'epic'},hootie_fruitie:{price:10,rarity:'legendary'},midas_hand:{price:6,rarity:'epic'}};
+ for(const i of source.items){const actual=rules.itemsById[i.id];assert.equal(actual.price,tuned[i.id]?.price??i.price);assert.equal(actual.rarity,tuned[i.id]?.rarity??i.rarity);if(i.id==='rock_bottom'){assert.equal(actual.effect.kind,'bonus_once_if_physical_symbol_present');assert.equal(actual.effect.bonusMultiplier,50);assert.equal(actual.effect.maxAwardsPerSpin,1);}else assert.deepEqual(actual.effect,i.id==='help_hand'?{...i.effect,protectCompletedLines:true}:i.id==='emils_shop'?{...i.effect,hiddenSelection:true}:i.effect);}
  const svg=readFileSync(new URL('../web/icons.svg',import.meta.url),'utf8');
  for(const i of source.items) assert.equal([...svg.matchAll(new RegExp(`id="${i.id}"`,'g'))].length,1);
 });
@@ -129,6 +129,7 @@ test('doubles arms only after activation, never compounds, and persists across r
  const discarded=applyAction(shop('rock_bottom',['doubles'],{doublesArmedForNextHand:true}),{type:'DISCARD',instanceId:'item-1'},rules).state;assert.equal(discarded.doublesArmedForNextHand,false);
 });
 test('Emil offers real unclaimed cards and atomically grants an additional reward without an item slot',()=>{
+ const raw=rawRules(); delete raw.catalog.items.find(i=>i.id==='emils_shop').effect.hiddenSelection; const rules=parseRules(raw);
  const before=shop('emils_shop',[],{milestoneReward:{cardId:rules.balance.round.milestoneCards.cards[0].id}});
  const choices=getShopView(before,rules).slots[0].destinyChoices;
  assert.equal(choices.length,3);assert.ok(choices.every(c=>c.cardId!==before.milestoneReward.cardId));
@@ -176,9 +177,9 @@ test('actual zero-line bonuses arm doubles; physical diamonds count after edits 
  const out=spin(['rock_bottom','doubles']);assert.equal(out.winningLines.length,0);assert.equal(out.doublesArmedForNextHand,true);
  const board=['cherry','cherry','diamond','bell','lemon','seven','diamond','bell','lemon'];
  const edited=spin(['help_hand','midas_hand','rock_bottom'],board,[0]);
- assert.equal(edited.midasDiamondCountThisRound,1);assert.equal(edited.specialFlatBonus,500n);
+ assert.equal(edited.midasDiamondCountThisRound,1);assert.equal(edited.specialFlatBonus,250n);
  const wild=spin(['midas_hand','rock_bottom','joker_mask'],noLineBoard,[0]);
- assert.equal(wild.midasDiamondCountThisRound,2);assert.equal(wild.specialFlatBonus,500n);
+ assert.equal(wild.midasDiamondCountThisRound,2);assert.equal(wild.specialFlatBonus,250n);
 });
 test('doubles multiplies after the single global floor and ignores pre-activation misses',()=>{
  const raw=rawRules();raw.catalog.items.find(i=>i.id==='score_puffer').effect.factor={num:3,den:2};const r=parseRules(raw);
@@ -207,6 +208,7 @@ test('Midas accumulates across actual spins, pays once and resets on clear/conti
  assert.equal(applyAction(second.state,{type:'CONTINUE'},rules).state.midasDiamondCountThisRound,0);
 });
 test('Emil can add each existing card while preserving the first; removal, upgrades and wild work together',()=>{
+ const raw=rawRules(); delete raw.catalog.items.find(i=>i.id==='emils_shop').effect.hiddenSelection; const rules=parseRules(raw);
  const cards=rules.balance.round.milestoneCards.cards;
  const cash=cards.find(c=>c.effect.kind==='grant_coins');
  for(const card of cards.filter(c=>c!==cash)){
@@ -224,6 +226,7 @@ test('Emil can add each existing card while preserving the first; removal, upgra
  const out=spinWithItems(rules,new CounterRandom(seed),s);assert.equal(out.milestoneWild,true);assert.deepEqual(out.milestoneSpinFactor,{num:5,den:4});
 });
 test('Emil selection failure and money overflow leave inventory, receipt and shop untouched',()=>{
+ const raw=rawRules(); delete raw.catalog.items.find(i=>i.id==='emils_shop').effect.hiddenSelection; const rules=parseRules(raw);
  const before=shop('emils_shop',['receipt_collector']);before.items[0].purchaseCounter=2;
  const snapshot=structuredClone(before), cash=rules.balance.round.milestoneCards.cards.find(c=>c.effect.kind==='grant_coins');
  assert.throws(()=>buyItem(before,'offer',rules,{selectedDestinyCardId:'fake'}),{code:'INVALID_DESTINY_CARD'});assert.deepEqual(before,snapshot);

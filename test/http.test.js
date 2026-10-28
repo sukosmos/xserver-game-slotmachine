@@ -408,10 +408,14 @@ test('expansion Emil selection HTTP validates cards, owner and price, commits on
  }
  const offer=state.shop.slots.find(o=>o.itemId==='emils_shop');assert.equal(offer.destinyChoices.length,3);
  const before=structuredClone(state), path=`/runs/${id}/shop/destiny`;
- const body={expectedRevision:state.revision,slotId:offer.slotId,selectedDestinyCardId:offer.destinyChoices[0].cardId};
+ const body={expectedRevision:state.revision,slotId:offer.slotId,selectedDestinySlotId:offer.destinyChoices[0].slotId};
  assert.equal((await call(path,{body,key:'wrong-owner',auth:otherToken})).status,404);
  assert.equal((await call(path,{body:{...body,coins:0},key:'forged'})).status,400);
- assert.equal((await call(path,{body:{...body,selectedDestinyCardId:state.milestoneReward.cardId},key:'owned'})).status,409);
+ assert.equal((await call(path,{body:{...body,selectedDestinyCardId:state.milestoneReward.cardId},key:'both-identities'})).status,400);
+ assert.equal((await call(path,{body:{expectedRevision:state.revision,slotId:offer.slotId,selectedDestinyCardId:state.milestoneReward.cardId},key:'identity-injection'})).status,409);
+ assert.equal((await call(path,{body:{...body,selectedDestinySlotId:'fake'},key:'unknown-position'})).status,409);
+ assert.ok(offer.destinyChoices.every(choice => Object.keys(choice).join() === 'slotId'));
+ assert.ok(!('destinyCards' in offer));
  assert.equal((await call(`/runs/${id}/shop/purchases`,{body:{expectedRevision:state.revision,slotId:offer.slotId},key:'no-selection'})).status,409);
  assert.deepEqual((await call(`/runs/${id}`)).data.state,before);
  const bought=await call(path,{body,key:'buy-destiny'});assert.equal(bought.status,200);

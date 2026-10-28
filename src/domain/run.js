@@ -17,7 +17,7 @@ export function validateAction(action, code = 'INVALID_ACTION') {
   const fields = ['type'];
   if (['BUY', 'CHOOSE_CARD', 'BUY_DESTINY'].includes(action.type)) fields.push('slotId');
   if (action.type === 'DISCARD') fields.push('instanceId');
-  if (action.type === 'BUY_DESTINY') fields.push('selectedDestinyCardId');
+  if (action.type === 'BUY_DESTINY') fields.push(Object.hasOwn(action, 'selectedDestinySlotId') ? 'selectedDestinySlotId' : 'selectedDestinyCardId');
   requireCondition(Object.keys(action).length === fields.length && fields.every((field) => Object.hasOwn(action, field)), code);
   for (const field of fields.slice(1)) {
     requireCondition(typeof action[field] === 'string' && action[field].length > 0 && action[field].length <= 128, code);
@@ -172,7 +172,7 @@ export function applyAction(previous, action, rules, rng) {
     state.shop = offer.shop; randomTrace.push(...offer.randomTrace);
   } else {
     if (action.type === 'BUY_DESTINY') requireCondition(hasExpansion(rules), 'INVALID_ACTION');
-    const result = action.type === 'BUY' || action.type === 'BUY_DESTINY' ? buyItem(state, action.slotId, rules, {selectedDestinyCardId:action.selectedDestinyCardId,rng})
+    const result = action.type === 'BUY' || action.type === 'BUY_DESTINY' ? buyItem(state, action.slotId, rules, {selectedDestinyCardId:action.selectedDestinyCardId,selectedDestinySlotId:action.selectedDestinySlotId,rng})
       : action.type === 'DISCARD' ? discardShopItem(state, action.instanceId, rules)
         : rerollShop(state, rules, rng);
     state = result.state;

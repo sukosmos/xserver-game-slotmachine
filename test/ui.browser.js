@@ -21,7 +21,21 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {
-    window.testClips = []; window.testAudioEvents = [];
+    window.testClips = []; window.testAudioEvents = []; window.testBeeps = []; window.testGains = [];
+    const setValueAtTime = AudioParam.prototype.setValueAtTime;
+    AudioParam.prototype.setValueAtTime = function (value, time) {
+      window.testGains.push(value); return setValueAtTime.call(this, value, time);
+    };
+    const createOscillator = AudioContext.prototype.createOscillator;
+    AudioContext.prototype.createOscillator = function () {
+      const oscillator = createOscillator.call(this), start = oscillator.start.bind(oscillator);
+      oscillator.start = (...args) => {
+        window.testBeeps.push({ frequency: oscillator.frequency.value, stage: document.querySelector('#scene')?.className,
+          award: document.querySelector('.paylines [data-award-id]')?.dataset.awardId });
+        return start(...args);
+      };
+      return oscillator;
+    };
     const NativeAudio = window.Audio;
     window.Audio = class extends NativeAudio {
       constructor(url) {
@@ -35,6 +49,18 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   await page.locator('[data-action="start"]').click();
   await page.locator('.lever:not(:disabled)').waitFor();
+  // Deterministic presentation fixture: three lines, one pattern and one item cue.
+  // Server/domain behavior is covered separately; this isolates highlight/audio synchronization.
+  const lineIds = ['row_top', 'row_middle', 'row_bottom'];
+  const showThreeLines = async route => {
+    const response = await route.fetch(), result = await response.json();
+    result.presentation.awards = lineIds.map((id, row) => ({ kind: 'line', id, label: `가로 ${row + 1}`,
+      indices: [row * 3, row * 3 + 1, row * 3 + 2], symbol: 'cherry', score: '30' }));
+    result.presentation.awards.push({ kind: 'square', id: 'square_top_left', label: '2×2', indices: [0, 1, 3, 4], symbol: 'cherry', score: '30' });
+    result.presentation.effects = [{ name: '효과 표시 검증', label: '×1' }];
+    await route.fulfill({ response, json: result });
+  };
+  await page.route('**/spins', showThreeLines);
 
   // Structural insertions must not replace keyed siblings or unchanged SVGs.
   const patchResult = await page.evaluate(async () => {
@@ -66,6 +92,8 @@ try {
   }
   async function observeSpin() {
     await page.evaluate(() => {
+      window.testBeeps = [];
+      window.testGains = [];
       window.stableIcons = [...document.querySelectorAll('.run-toolbar svg, .symbol-table svg')];
       window.reelGrid = document.querySelector('.reel-grid');
       window.leverNode = document.querySelector('.lever-arm');
@@ -94,15 +122,22 @@ try {
   assert.ok(audioEvents.some(event => event.type === 'playing' && event.stage.includes('motion-rolling')));
   assert.ok(audioEvents.some(event => event.type === 'ended' || event.type === 'pause'));
   assert.equal(await page.evaluate(() => window.testClips[0].paused), true);
+  const lineBeeps = await page.evaluate(() => window.testBeeps);
+  assert.deepEqual(lineBeeps.map(beep => beep.award), lineIds);
+  assert.ok(lineBeeps.every(beep => beep.frequency === 660 && beep.stage.includes('motion-award')));
+  assert.deepEqual(await page.evaluate(() => window.testGains), [0.12, 0.12, 0.12]);
+  assert.equal(await page.evaluate(() => window.testClips[0].volume), 0.3);
   const firstPlays = audioEvents.filter(event => event.type === 'playing').length;
   for (const preferences of [{ fast: true }, { reduced: true }, { sound: false }]) {
     await settings(preferences);
     const stages = await observeSpin();
     assert.ok(stages.every(row => row.stable && row.grid && row.lever));
     assert.equal(await page.evaluate(() => window.testAudioEvents.filter(event => event.type === 'playing').length), firstPlays);
+    assert.deepEqual(await page.evaluate(() => window.testBeeps.map(beep => beep.award)), preferences.fast ? lineIds : []);
   }
 
   await settings({});
+  await page.unroute('**/spins', showThreeLines);
   await page.route('**/spins', route => route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ error: { code: 'TEST_REJECTED' } }) }));
   await observeSpin();
   assert.equal(await page.evaluate(() => window.testClips[0].paused), true);
@@ -114,7 +149,8 @@ try {
   assert.ok((await page.locator('#detail-content').textContent()).includes('R6 상점부터'));
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ passed: true, audioDuration: duration, observedUpdates: observations.length,
-    stableIcons: true, normalSound: true, mutedModes: 3, errorCleanup: true, mobileOverflow: false }));
+    stableIcons: true, normalSound: true, mutedModes: 3, lineBeeps: lineBeeps.length, reducedBeeps: 0,
+    errorCleanup: true, mobileOverflow: false }));
 } finally {
   await browser?.close();
   await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); });

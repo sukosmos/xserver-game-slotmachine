@@ -141,7 +141,7 @@ export function createGameServer({ store, authenticate = (token) => store.authen
       requireCondition(req.method === 'POST' && routes.has(suffix), 'NOT_FOUND');
       const body = await readBody(req);
       const type = routes.get(suffix);
-      const allowed = ['expectedRevision', ...(['BUY', 'CHOOSE_CARD', 'BUY_DESTINY'].includes(type) ? ['slotId', ...(type === 'BUY_DESTINY' ? ['selectedDestinyCardId'] : [])] : type === 'DISCARD' ? ['instanceId'] : [])];
+      const allowed = ['expectedRevision', ...(['BUY', 'CHOOSE_CARD', 'BUY_DESTINY'].includes(type) ? ['slotId', ...(type === 'BUY_DESTINY' ? [Object.hasOwn(body, 'selectedDestinySlotId') ? 'selectedDestinySlotId' : 'selectedDestinyCardId'] : [])] : type === 'DISCARD' ? ['instanceId'] : [])];
       requireCondition(Object.keys(body).length === allowed.length && allowed.every((field) => Object.hasOwn(body, field)), 'INVALID_COMMAND');
       send(200, store.execute(userId, runId, { ...body, type, idempotencyKey: req.headers['idempotency-key'] }));
     } catch (error) {
