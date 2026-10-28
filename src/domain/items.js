@@ -22,14 +22,19 @@ const spinKinds = new Set([
 // Settlement/shop/round-start effects never consume a spin trigger.
 const economicKinds = new Set(['clear_base_coins_add', 'interest_cap_add', 'one_free_reroll_per_shop', 'shop_item_cost_subtract', 'chance_coins_on_clear', 'round_hands_add', 'refund_coins_every_n_item_purchases', 'grant_hand_before_run_failed', 'clear_round_before_run_failed']);
 
-export function candidateLines(board, rules) {
+export function candidateLines(board, rules, { protectCompletedLines = false } = {}) {
   validateBoard(board, rules);
+  // Protect cells, not whole candidate lines: an intersection is safe if its edited cell is outside.
+  const protectedCells = new Set(protectCompletedLines
+    ? rules.lines.filter(({ indices }) => indices.every(index => board[index] === board[indices[0]]))
+      .flatMap(({ indices }) => indices) : []);
   return rules.lines.flatMap(({ id, indices }) => {
     const counts = new Map();
     for (const index of indices) counts.set(board[index], (counts.get(board[index]) ?? 0) + 1);
     const pair = [...counts].find(([, count]) => count === 2);
     if (!pair) return [];
-    return [{ lineId: id, changeIndex: indices.find((index) => board[index] !== pair[0]), newSymbol: pair[0] }];
+    const changeIndex = indices.find((index) => board[index] !== pair[0]);
+    return protectedCells.has(changeIndex) ? [] : [{ lineId: id, changeIndex, newSymbol: pair[0] }];
   });
 }
 
@@ -93,7 +98,9 @@ export function spinWithItems(rules, rng, state = {}) {
   };
   const helper = active.find(i=>getItem(rules,i.itemId).effect.kind === 'complete_one_random_two_match_line');
   if (helper) {
-    const candidates = candidateLines(board,rules);
+    const candidates = candidateLines(board, rules, {
+      protectCompletedLines: getItem(rules, helper.itemId).effect.protectCompletedLines === true,
+    });
     if (candidates.length) {
       const selected = candidates[draw(candidates.length,'candidate_selection',helper.instanceId)];
       board = edit(board,selected); trigger(helper,selected);

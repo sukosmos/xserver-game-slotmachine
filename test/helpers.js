@@ -81,3 +81,11 @@ export const v012Rules = parseRules(rawV012Rules());
 
 export function rawV013Rules() { return JSON.parse(readFileSync(new URL('./fixtures/rules-v013.json', import.meta.url), 'utf8')); }
 export const v013Rules = parseRules(rawV013Rules());
+
+// Saved v0.15 rock-bottom policy before the user's presence/upgrade correction.
+export function rawLegacyRockRules() {
+  const raw = rawRules();
+  const source = JSON.parse(readFileSync(new URL('./fixtures/expansion8-catalog.json', import.meta.url)));
+  raw.catalog.items.find(i => i.id === 'rock_bottom').effect = source.items.find(i => i.id === 'rock_bottom').effect;
+  return raw;
+}

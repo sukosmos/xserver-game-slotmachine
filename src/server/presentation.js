@@ -24,7 +24,7 @@ export function spinPresentation(event, rules) {
   for (const active of event.activeEffects) counts.set(active.itemId, (counts.get(active.itemId) ?? 0) + 1);
   for (const [itemId, stacks] of counts) {
     const e = getItem(rules, itemId).effect;
-    if (e.kind === 'bonus_per_physical_symbol_base_value' && BigInt(event.specialFlatBonus ?? '0') > 0n) add(itemId, `+${event.specialFlatBonus}점`);
+    if (['bonus_per_physical_symbol_base_value', 'bonus_once_if_physical_symbol_present'].includes(e.kind) && BigInt(event.specialFlatBonus ?? '0') > 0n) add(itemId, `+${event.specialFlatBonus}점`);
     if (e.kind === 'double_next_actual_hand_after_no_line') {
       if (event.doublesApplied) add(itemId, '×2');
       if (event.doublesArmedForNextHand && event.outcome !== 'RUN_FAILED') add(itemId, 'NEXT ×2', 'next');

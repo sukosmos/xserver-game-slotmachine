@@ -41,6 +41,24 @@ export function symbolScores(rules, items) {
   });
 }
 
+/** Additional points per physical cell; independent of base-score and line modifiers. */
+export function physicalSymbolBonus(rules, items, symbolId) {
+  return items.reduce((sum, instance) => {
+    const effect = getItem(rules, instance.itemId).effect;
+    return effect.kind === 'bonus_per_physical_symbol_base_value' && effect.symbol === symbolId
+      ? sum + rules.symbolsById[symbolId].basePoint * BigInt(effect.bonusMultiplier) : sum;
+  }, 0n);
+}
+
+/** Award once if this physical symbol appears; the caller supplies its upgraded cell point. */
+export function symbolPresenceBonus(rules, items, symbolId, point) {
+  return items.reduce((sum, instance) => {
+    const effect = getItem(rules, instance.itemId).effect;
+    return effect.kind === 'bonus_once_if_physical_symbol_present' && effect.symbol === symbolId
+      ? sum + point * BigInt(effect.bonusMultiplier) : sum;
+  }, 0n);
+}
+
 /** No RNG or mutation. Preview and final scoring use this same exact path. */
 export function scoreWithItems(board, rules, items, { consecutiveWinHands = 0, virtualScore = 0n, lineBonus = null, wildMarks = [], physicalChanged = false, spinFactor = null, doublesArmed = false } = {}) {
   validateBoard(board, rules);
@@ -95,8 +113,9 @@ export function scoreWithItems(board, rules, items, { consecutiveWinHands = 0, v
     }
   }
   const patternScore = winningPatterns.reduce((sum, pattern) => sum + pattern.score, 0n);
-  const specialFlatBonus = effects.filter(e=>e.kind === 'bonus_per_physical_symbol_base_value').reduce((sum,e)=>
-    sum + BigInt(board.filter(s=>s===e.symbol).length) * rules.symbolsById[e.symbol].basePoint * BigInt(e.bonusMultiplier),0n);
+  const specialFlatBonus = rules.symbols.reduce((sum, symbol) => sum
+    + BigInt(board.filter(id => id === symbol.id).length) * physicalSymbolBonus(rules, items, symbol.id)
+    + (board.includes(symbol.id) ? symbolPresenceBonus(rules, items, symbol.id, profiles.get(symbol.id).point) : 0n), 0n);
   const doublesApplied = doublesArmed && effects.some(e=>e.kind === 'double_next_actual_hand_after_no_line');
   return {
     ...(hasExpansion(rules) ? { specialFlatBonus, doublesApplied } : {}),

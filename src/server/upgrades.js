@@ -1,6 +1,6 @@
 import { hasExpansion, procDetails } from '../domain/expansion8.js';
 import { activeItems } from '../domain/inventory.js';
-import { weightedSymbols, symbolScores } from '../domain/item-scoring.js';
+import { weightedSymbols, symbolScores, physicalSymbolBonus, symbolPresenceBonus } from '../domain/item-scoring.js';
 import { getItem } from '../domain/rules.js';
 import { roundHands } from '../domain/hands.js';
 import { dueWeightBuffs } from '../domain/selected8.js';
@@ -43,7 +43,13 @@ export function upgradeView(state, rules) {
       symbols: rules.symbols.map((baseSymbol) => {
         const symbol = weighted.find((s) => s.id === baseSymbol.id) ?? { ...baseSymbol, weight:0 };
         const base = rules.symbolsById[symbol.id], score = scores.get(symbol.id);
+        const physicalBonus = physicalSymbolBonus(rules, active, symbol.id);
         return { id: symbol.id, basePoint: String(base.basePoint), point: String(score.point),
+          ...(physicalBonus > 0n ? { physicalBonus: String(physicalBonus), physicalPoint: String(score.point + physicalBonus) } : {}),
+          ...(active.some(i => {
+            const effect = getItem(rules, i.itemId).effect;
+            return effect.kind === 'bonus_once_if_physical_symbol_present' && effect.symbol === symbol.id;
+          }) ? { presenceBonus: String(symbolPresenceBonus(rules, active, symbol.id, score.point)) } : {}),
           baseLinePayout: String(base.linePayout), linePayout: String(score.linePayout),
           baseWeight: base.weight, weight: symbol.weight, baseProbability: percentage(base.weight, baseTotal), probability: percentage(symbol.weight, totalWeight),
           ...(symbol.id === removedSymbol ? { removed:true } : {}),

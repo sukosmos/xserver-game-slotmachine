@@ -5,9 +5,56 @@ import { acquireItem, discardItem, finishItemSpin } from '../src/domain/inventor
 import { scoreWithItems } from '../src/domain/item-scoring.js';
 import { upgradeView } from '../src/server/upgrades.js';
 import { parseRules } from '../src/domain/rules.js';
-import { rules, rawRules } from './helpers.js';
+import { rules, rawRules, rawLegacyRockRules } from './helpers.js';
 
 const symbol = (view, id = 'cherry') => view.symbols.find((row) => row.id === id);
+
+test('hootie stats match scoring after upgrades and only apply to cherry and lemon', () => {
+  const state = createRun(rules, { initialItemIds: ['hootie_fruitie', 'golden_harvest', 'lemon_syrup'] });
+  const view = upgradeView(state, rules).current;
+  assert.equal(symbol(view).point, '9'); assert.equal(symbol(view).linePayout, '270');
+  assert.equal(symbol(view, 'lemon').point, '18'); assert.equal(symbol(view, 'lemon').linePayout, '450');
+  for (const row of view.symbols) {
+    const spin = scoreWithItems(Array(9).fill(row.id), rules, state.items);
+    assert.equal(spin.baseScore, BigInt(row.point) * 9n);
+    assert.ok(spin.winningLines.every(line => String(line.score) === row.linePayout));
+    assert.equal(row.sources.some(source => source.itemId === 'hootie_fruitie'), ['cherry', 'lemon'].includes(row.id));
+  }
+});
+
+test('hootie purchase preview and discard respect activation, including the zero-base contract', () => {
+  let state = { ...createRun(rules, { initialItemIds: ['devils_contract'] }), phase: 'SHOP' };
+  state = { ...state, ...acquireItem(state, 'hootie_fruitie', rules, { activeFromRound: 2 }) };
+  const view = upgradeView(state, rules);
+  assert.equal(symbol(view.current).point, '0'); assert.equal(symbol(view.next).point, '0');
+  assert.equal(symbol(view.current).linePayout, '120'); assert.equal(symbol(view.next).linePayout, '360');
+  state = { ...state, ...discardItem(state, state.items.at(-1).instanceId, rules) };
+  assert.equal(symbol(upgradeView(state, rules).next).linePayout, '120');
+});
+
+test('legacy rock bottom shows its physical-cell bonus separately without changing base or line values', () => {
+  const rules = parseRules(rawLegacyRockRules());
+  const state = createRun(rules, { initialItemIds: ['rock_bottom', 'gem_appraiser', 'devils_contract'] });
+  const view = upgradeView(state, rules).current, row = symbol(view, 'diamond');
+  assert.equal(row.point, '0'); assert.equal(row.physicalBonus, '500'); assert.equal(row.physicalPoint, '500');
+  const spin = scoreWithItems(Array(9).fill('diamond'), rules, state.items);
+  assert.equal(BigInt(row.physicalPoint) * 9n, spin.baseScore + spin.specialFlatBonus);
+  assert.ok(spin.winningLines.every(line => String(line.score) === row.linePayout));
+  assert.equal(symbol(view).physicalBonus, undefined);
+  const future = { ...state, phase: 'SHOP', items: state.items.map(i => i.itemId === 'rock_bottom' ? { ...i, activeFromRound: 2 } : i) };
+  assert.equal(symbol(upgradeView(future, rules).current, 'diamond').physicalBonus, undefined);
+  assert.equal(symbol(upgradeView(future, rules).next, 'diamond').physicalPoint, '500');
+  const removed = { ...state, ...discardItem({ ...state, phase: 'SHOP' }, state.items[0].instanceId, rules) };
+  assert.equal(symbol(upgradeView(removed, rules).current, 'diamond').physicalBonus, undefined);
+});
+
+test('legacy physical symbol bonuses stay exact above Number range', () => {
+  const raw = rawLegacyRockRules(); raw.balance.symbols.find(s => s.id === 'diamond').basePoint = '9007199254740993';
+  const config = parseRules(raw), state = createRun(config, { initialItemIds: ['rock_bottom'] });
+  const row = symbol(upgradeView(state, config).current, 'diamond');
+  assert.equal(row.physicalBonus, String(9007199254740993n * 100n));
+  assert.equal(row.physicalPoint, String(9007199254740993n * 101n));
+});
 
 test('baseline shows exact points, line payout and normalized draw chance', () => {
   const view = upgradeView(createRun(rules), rules);

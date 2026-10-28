@@ -10,10 +10,11 @@ function describeEffect(item) {
   const e = item.effect;
   const chance = e.triggerPolicy ? '남은 Hand 수의 역수' : `${e.triggerChanceBasisPoints / 100}%`;
   switch (e.kind) {
+    case 'bonus_once_if_physical_symbol_present': return `최종 보드에 실제 다이아가 한 개라도 있으면, 강화된 다이아 1칸 점수 ×${e.bonusMultiplier}점을 스핀당 한 번 추가합니다. 다이아 개수와 라인 완성 여부에 관계없이 추가점수는 같습니다. 강화 아이템과 전체 강화 카드가 반영되며, 이 추가점수까지 합산한 뒤 스핀 전체 배율을 적용합니다.`;
     case 'expand_inventory_capacity': return `영구 +${e.permanentSlotsAdded} / 제한 +${e.limitedSlotsAdded}칸 · 즉시 적용 · 장착칸 0 · 폐기 불가`;
-    case 'bonus_per_physical_symbol_base_value': return `실제 다이아 기본점수 ×${e.bonusMultiplier} 추가 (기본 다이아 1개당 +${e.rawBaseScore * e.bonusMultiplier}점) · 전체 배수 적용`;
+    case 'bonus_per_physical_symbol_base_value': return `최종 보드의 실제 다이아 한 칸마다, 강화 전 기본점수 ${e.rawBaseScore} × ${e.bonusMultiplier} = ${e.rawBaseScore * e.bonusMultiplier}점을 스핀 점수에 추가합니다. 이 추가점수까지 합산한 뒤 스핀 전체 배율을 적용합니다. 다이아 강화로 추가점수는 늘어나지 않으며, 라인 완성 여부와 관계없이 지급됩니다.`;
     case 'choose_one_remaining_destiny_card': return '미획득 운명 카드 1장 선택 · 확정 시 즉시 지급 · 장착칸 0';
-    case 'complete_one_random_two_match_line': return '다음 한 라운드 · 매 Hand 두 개 일치 라인 하나를 균등 선택해 완성 · 물리 조작 최우선';
+    case 'complete_one_random_two_match_line': return `다음 한 라운드 · 매 Hand 두 개 일치 라인 하나를 균등 선택해 완성${e.protectCompletedLines ? ' · 이미 완성된 라인의 칸은 변경하지 않음 · 안전한 후보가 없으면 미발동' : ''} · 물리 조작 최우선`;
     case 'modify_item_proc_chances': return '모든 아이템 발동 확률 상대 +50% (최대 100%) · 심벌·상점 확률 제외';
     case 'coin_on_round_clear_per_physical_symbol_count': return `라운드 실제 다이아 ${e.diamondsPerCoin}개당 클리어 +1코인 · 최대 ${e.maxCoinsPerRound} · 실패 보상 0`;
     case 'double_next_actual_hand_after_no_line': return '실제 당첨 0라인이면 다음 스핀 전체 ×2 · 연속 무당첨에도 ×2 · 라운드 이월';
@@ -72,10 +73,11 @@ export function summarizeItem(item) {
   const e = item.effect, chance = e.triggerPolicy ? '라운드당 최대 1회' : `${e.triggerChanceBasisPoints / 100}%`;
   const factor = percent;
   switch (e.kind) {
+    case 'bonus_once_if_physical_symbol_present': return `다이아 등장 시 강화된 1칸 점수 ×${e.bonusMultiplier} 추가 · 개수 무관 · 스핀당 1회 · 전체 배율 전 합산`;
     case 'expand_inventory_capacity': return `영구 +${e.permanentSlotsAdded} / 제한 +${e.limitedSlotsAdded}칸 · 즉시 적용 · 장착칸 0 · 폐기 불가`;
-    case 'bonus_per_physical_symbol_base_value': return `실제 다이아 기본점수 ×${e.bonusMultiplier} 추가 (기본 다이아 1개당 +${e.rawBaseScore * e.bonusMultiplier}점) · 전체 배수 적용`;
+    case 'bonus_per_physical_symbol_base_value': return `실제 다이아 한 칸당 +${e.rawBaseScore * e.bonusMultiplier}점 (${e.rawBaseScore} × ${e.bonusMultiplier}, 강화 전 기준) · 스핀 전체 배율 적용 전에 합산`;
     case 'choose_one_remaining_destiny_card': return '미획득 운명 카드 1장 선택 · 확정 시 즉시 지급 · 장착칸 0';
-    case 'complete_one_random_two_match_line': return '다음 한 라운드 · 매 Hand 두 개 일치 라인 하나를 균등 선택해 완성 · 물리 조작 최우선';
+    case 'complete_one_random_two_match_line': return `다음 한 라운드 · 매 Hand 두 개 일치 라인 하나를 균등 선택해 완성${e.protectCompletedLines ? ' · 이미 완성된 라인의 칸 보호' : ''} · 물리 조작 최우선`;
     case 'modify_item_proc_chances': return '모든 아이템 발동 확률 상대 +50% (최대 100%) · 심벌·상점 확률 제외';
     case 'coin_on_round_clear_per_physical_symbol_count': return `라운드 실제 다이아 ${e.diamondsPerCoin}개당 클리어 +1코인 · 최대 ${e.maxCoinsPerRound} · 실패 보상 0`;
     case 'double_next_actual_hand_after_no_line': return '실제 당첨 0라인이면 다음 스핀 전체 ×2 · 연속 무당첨에도 ×2 · 라운드 이월';

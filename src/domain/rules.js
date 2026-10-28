@@ -55,7 +55,7 @@ export function deepFreeze(value) {
 
 // Catalog validation is deliberately separate from effect execution (Phase 2+).
 const effectSpecs = {
-  ...Object.fromEntries(Object.entries(expansionContracts).map(([kind,spec])=>[kind,[spec.category,Object.keys(spec.fields)]])),
+  ...Object.fromEntries(Object.entries(expansionContracts).map(([kind,spec])=>[kind,[spec.category,Object.keys(spec.fields),Object.keys(spec.optionalFields ?? {})]])),
   weight_add: ['weight', ['symbol', 'amount'], ['basePointAdd']],
   symbol_line_add_factor: ['payout', ['symbol', 'extraFactor'], ['basePointAdd']],
   random_candidate_edit: ['board', ['triggerChanceBasisPoints', 'candidateSelection', 'boardPriority'], ['selectedLineMultiplier']],
@@ -123,6 +123,9 @@ function validateItem(item, path) {
   }
   const expansion = expansionContracts[effect.kind];
   if (expansion) {
+    for (const [key, expected] of Object.entries(expansion.optionalFields ?? {})) {
+      if (Object.hasOwn(effect, key)) literal(effect[key], expected, `${path}.effect.${key}`);
+    }
     literal(item.slot, expansion.slot, `${path}.slot`);
     literal(item.maxStacks, 1, `${path}.maxStacks`);
     literal(item.uniquePerRun, item.slot !== 'round', `${path}.uniquePerRun`);
@@ -131,7 +134,7 @@ function validateItem(item, path) {
       else check(JSON.stringify(effect[key]) === JSON.stringify(expected), `${path}.effect.${key}`, 'unsupported policy');
     }
     // This engine implements these exact lifecycle and probability policies.
-    for (const key of ['occupiesSlots','grantPrice','durationRounds','procChanceBasisPoints','relativeIncreaseNumerator','relativeIncreaseDenominator','maxChanceBasisPoints','maxPhysicalEditsPerHand','scoreMultiplierNumerator','scoreMultiplierDenominator']) {
+    for (const key of ['occupiesSlots','grantPrice','durationRounds','procChanceBasisPoints','relativeIncreaseNumerator','relativeIncreaseDenominator','maxChanceBasisPoints','maxPhysicalEditsPerHand','scoreMultiplierNumerator','scoreMultiplierDenominator','maxAwardsPerSpin']) {
       if (key in expansion.fields) literal(effect[key], expansion.fields[key], `${path}.effect.${key}`);
     }
   } else {

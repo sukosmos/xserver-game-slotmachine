@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { rules, rawRules, randomForBoard, noLineBoard, seed } from './helpers.js';
+import { rules, rawRules, rawLegacyRockRules, randomForBoard, noLineBoard, seed } from './helpers.js';
 import { parseRules } from '../src/domain/rules.js';
 import { createInventory, acquireItem, discardItem, inventoryUsage, inventoryLimits } from '../src/domain/inventory.js';
 import { createRun, applyAction } from '../src/domain/run.js';
@@ -22,7 +22,7 @@ test('v0.15 appends exactly eight items and preserves all 37 existing definition
  const prior=fixture('rules-v014');const source=fixture('expansion8-catalog');
  assert.equal(rules.catalog.items.length,45);
  assert.deepEqual(rules.catalog.items.slice(0,37),prior.catalog.items);
- for(const i of source.items){const actual=rules.itemsById[i.id];assert.equal(actual.price,i.price);assert.equal(actual.rarity,i.rarity);assert.deepEqual(actual.effect,i.effect);}
+ for(const i of source.items){const actual=rules.itemsById[i.id];assert.equal(actual.price,i.id==='hootie_fruitie'?10:i.price);assert.equal(actual.rarity,i.id==='hootie_fruitie'?'legendary':i.rarity);if(i.id==='rock_bottom'){assert.equal(actual.effect.kind,'bonus_once_if_physical_symbol_present');assert.equal(actual.effect.bonusMultiplier,100);assert.equal(actual.effect.maxAwardsPerSpin,1);}else assert.deepEqual(actual.effect,i.id==='help_hand'?{...i.effect,protectCompletedLines:true}:i.effect);}
  const svg=readFileSync(new URL('../web/icons.svg',import.meta.url),'utf8');
  for(const i of source.items) assert.equal([...svg.matchAll(new RegExp(`id="${i.id}"`,'g'))].length,1);
 });
@@ -49,12 +49,13 @@ test('bag buys into full inventory, immediately expands capacity, occupies no sl
  assert.throws(()=>discardItem(after,after.items.at(-1).instanceId,rules),{code:'ITEM_NOT_DISCARDABLE'});
  const duplicate={...after,shop:before.shop};assert.throws(()=>buyItem(duplicate,'offer',rules),{code:'ITEM_ALREADY_PURCHASED'});
 });
-test('rock bottom uses raw diamond points, survives contract, receives global multiplier and exact arithmetic',()=>{
+test('legacy rock bottom uses raw diamond points, survives contract, receives global multiplier and exact arithmetic',()=>{
+ const rules=parseRules(rawLegacyRockRules());
  const base=scoreWithItems(noLineBoard,rules,inventory('rock_bottom').items);
  assert.equal(base.specialFlatBonus,1000n);
  const contract=scoreWithItems(noLineBoard,rules,inventory('rock_bottom','devils_contract','score_puffer').items);
  assert.equal(contract.baseScore,0n);assert.equal(contract.spinScore,1500n);
- const raw=rawRules();raw.balance.symbols.find(s=>s.id==='diamond').basePoint='9007199254740993';
+ const raw=rawLegacyRockRules();raw.balance.symbols.find(s=>s.id==='diamond').basePoint='9007199254740993';
  const r=parseRules(raw);const out=scoreWithItems(noLineBoard,r,inventory('rock_bottom').items);
  assert.equal(out.specialFlatBonus,9007199254740993n*200n);
 });
@@ -155,7 +156,7 @@ test('actual zero-line bonuses arm doubles; physical diamonds count after edits 
  const edited=spin(['help_hand','midas_hand','rock_bottom'],board,[0]);
  assert.equal(edited.midasDiamondCountThisRound,1);assert.equal(edited.specialFlatBonus,500n);
  const wild=spin(['midas_hand','rock_bottom','joker_mask'],noLineBoard,[0]);
- assert.equal(wild.midasDiamondCountThisRound,2);assert.equal(wild.specialFlatBonus,1000n);
+ assert.equal(wild.midasDiamondCountThisRound,2);assert.equal(wild.specialFlatBonus,500n);
 });
 test('doubles multiplies after the single global floor and ignores pre-activation misses',()=>{
  const raw=rawRules();raw.catalog.items.find(i=>i.id==='score_puffer').effect.factor={num:3,den:2};const r=parseRules(raw);

@@ -1,4 +1,18 @@
 export const expansionContracts = {
+  "bonus_once_if_physical_symbol_present": {
+    "category": "score",
+    "slot": "permanent",
+    "fields": {
+      "symbol": "diamond",
+      "baseValueSource": "upgraded_symbol_point",
+      "bonusMultiplier": 100,
+      "maxAwardsPerSpin": 1,
+      "board": "finalPhysicalBoard",
+      "scoreBucket": "specialFlatBonus",
+      "affectedByLineOnlyMultipliers": false,
+      "affectedByGlobalScoreMultipliers": true
+    }
+  },
   "expand_inventory_capacity": {
     "category": "capacity",
     "slot": "none",
@@ -41,6 +55,7 @@ export const expansionContracts = {
   "complete_one_random_two_match_line": {
     "category": "board",
     "slot": "round",
+    "optionalFields": { "protectCompletedLines": true },
     "fields": {
       "durationRounds": 1,
       "startsAt": "next_round_after_purchase",
